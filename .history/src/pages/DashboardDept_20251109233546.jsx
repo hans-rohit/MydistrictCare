@@ -611,10 +611,8 @@ export default function DashboardDept({ fixedDept }) {
   };
 
   // Initialize filters from URL on mount and when dept changes (wait for auth to finish loading)
-  // Note: We need profile.role in deps to ensure isSuperAdmin is correctly evaluated
   useEffect(() => {
     if (loading) return; // Wait for auth state to be determined
-    // Profile will be set when loading becomes false (either user profile or null)
 
     const qParam = (urlSearchParams.get("q") || "").trim();
     const statusParam = urlSearchParams.get("status") || "";
@@ -635,7 +633,7 @@ export default function DashboardDept({ fixedDept }) {
       loadInitial();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dept, loading, profile?.role]); // Re-run if dept, loading, or role changes
+  }, [dept, loading]); // Run when dept changes or auth finishes loading
 
   const handleUpdate = async (postId) => {
     const newStatus = statusMap[postId];

@@ -1,67 +1,51 @@
-import { useEffect, useMemo, useState, useRef } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   collection,
   onSnapshot,
-  query,
-  where,
   orderBy,
-  doc,
-  updateDoc,
-  getDocs,
+  query,
   limit,
   startAfter,
+  getDocs,
+  where,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { useAuth } from "../context/AuthContext";
 import {
-  Container,
-  Heading,
   SimpleGrid,
+  Container,
+  Alert,
+  AlertIcon,
+  Box,
+  Heading,
   Stat,
   StatLabel,
   StatNumber,
-  Box,
-  Select,
-  Textarea,
+  Text,
+  VStack,
+  HStack,
   Button,
+  Divider,
+  Icon,
+  Skeleton,
+  SkeletonText,
   Input,
   InputGroup,
   InputLeftElement,
-  VStack,
-  HStack,
-  useToast,
-  Alert,
-  AlertIcon,
-  Text,
-  Link,
-  Skeleton,
-  SkeletonText,
+  Select,
   Spinner,
 } from "@chakra-ui/react";
 import { SearchIcon } from "@chakra-ui/icons";
+import { keyframes } from "@emotion/react";
+import { FaHandsHelping, FaMapMarkerAlt, FaRegLightbulb } from "react-icons/fa";
 import PostCard from "../components/PostCard";
-import {
-  getCurrentPosition,
-  distanceKm,
-  googleMapsLink,
-} from "../lib/location";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-export default function DashboardDept({ fixedDept }) {
-  const params = useParams();
+export default function Home({ showIntro = true }) {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
-  const routeDept = params.dept;
-  const { profile, loading } = useAuth();
-
-  // Resolve department: prop > route param > profile
-  const dept = fixedDept || routeDept || profile?.department || null;
-
+  const { user, profile, loading } = useAuth();
   const [posts, setPosts] = useState([]);
   const [error, setError] = useState(null);
-  const [statusMap, setStatusMap] = useState({});
-  const [noteMap, setNoteMap] = useState({});
-  const [myLoc, setMyLoc] = useState(null);
-  const [locMsg, setLocMsg] = useState("");
   const [totalDocs, setTotalDocs] = useState(0);
   const [counts, setCounts] = useState({
     total: 0,
@@ -69,7 +53,6 @@ export default function DashboardDept({ fixedDept }) {
     in_progress: 0,
     resolved: 0,
     rejected: 0,
-    deleted: 0,
   });
   const [lastVisible, setLastVisible] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -83,41 +66,39 @@ export default function DashboardDept({ fixedDept }) {
   const [searchIsFetchingMore, setSearchIsFetchingMore] = useState(false);
 
   const [searchText, setSearchText] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(""); // '' means all
+  const [deptFilter, setDeptFilter] = useState(""); // '' means all
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [appliedStatus, setAppliedStatus] = useState("");
+  const [appliedDept, setAppliedDept] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [appliedFrom, setAppliedFrom] = useState("");
   const [appliedTo, setAppliedTo] = useState("");
-  // Show 6 items per page for department dashboards
-  const PAGE_SIZE = 6;
-  const toast = useToast();
-
+  const navigate = useNavigate();
+  const PAGE_SIZE = 6; // show 6 items per page by default
   const isSuperAdmin = profile?.role === "admin";
 
   const hasTyped = searchText.trim().length > 0;
   const hasStatusSelected = !!statusFilter;
+  const hasDeptSelected = !!deptFilter;
   const isSearchingActive =
     appliedSearch.trim().length > 0 ||
     !!appliedStatus ||
+    !!appliedDept ||
     !!appliedFrom ||
     !!appliedTo;
 
   // Get total count of documents (for pagination tracking only)
   // Note: Don't include isSuperAdmin in deps to avoid re-running when profile loads
   useEffect(() => {
-    if (!dept) return;
-    const q = query(
-      collection(db, "posts"),
-      where("departmentTag", "==", dept)
-    );
+    const q = query(collection(db, "posts"));
     const unsub = onSnapshot(
       q,
       (snap) => {
         let allPosts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-        // Filter out deleted posts for non-super-admin for count purposes
+        // Filter out deleted posts for non-super-admin
         if (!isSuperAdmin) {
           allPosts = allPosts.filter(
             (p) => !p.deleted && p.status !== "deleted"
@@ -133,11 +114,10 @@ export default function DashboardDept({ fixedDept }) {
     );
     return () => unsub();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dept]); // Only re-run when dept changes, not when isSuperAdmin changes
+  }, []); // Don't re-run when isSuperAdmin changes to avoid showing deleted posts on reload
 
   // Fetch paginated data - Load initial and append next pages for infinite scroll
   const loadInitial = async () => {
-    if (!dept) return;
     setIsLoading(true);
     setPosts([]);
     setLastVisible(null);
@@ -146,7 +126,6 @@ export default function DashboardDept({ fixedDept }) {
       // Fetch for pagination
       let q = query(
         collection(db, "posts"),
-        where("departmentTag", "==", dept),
         orderBy("createdAt", "desc"),
         limit(PAGE_SIZE * 3) // Increased from 2 to 3 to fetch more docs
       );
@@ -157,7 +136,6 @@ export default function DashboardDept({ fixedDept }) {
       // ALSO fetch ALL posts to recalculate base counts
       const countQuery = query(
         collection(db, "posts"),
-        where("departmentTag", "==", dept),
         orderBy("createdAt", "desc")
       );
       const countSnapshot = await getDocs(countQuery);
@@ -179,7 +157,7 @@ export default function DashboardDept({ fixedDept }) {
         deleted: 0,
       };
       allPosts.forEach((p) => {
-        if (c[p.status] !== undefined) c[p.status]++;
+        if (p?.status && c[p.status] !== undefined) c[p.status]++;
       });
       setCounts(c);
 
@@ -203,25 +181,17 @@ export default function DashboardDept({ fixedDept }) {
       setError(null);
     } catch (err) {
       setError(err.message);
-      toast({
-        title: "Error loading posts",
-        description: err.message,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const loadNext = async () => {
-    if (!dept || !lastVisible || isFetchingMore || !hasMore) return;
+    if (!lastVisible || isFetchingMore || !hasMore) return;
     setIsFetchingMore(true);
     try {
       const q = query(
         collection(db, "posts"),
-        where("departmentTag", "==", dept),
         orderBy("createdAt", "desc"),
         startAfter(lastVisible),
         limit(PAGE_SIZE * 3) // Increased from 2 to 3
@@ -252,19 +222,11 @@ export default function DashboardDept({ fixedDept }) {
       setError(null);
     } catch (err) {
       setError(err.message);
-      toast({
-        title: "Error loading more posts",
-        description: err.message,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
     } finally {
       setIsFetchingMore(false);
     }
   };
 
-  // Fetch initial page
   // Note: Initial load is handled by the URL initialization useEffect below
   // which checks for URL params and calls either fetchSearch or loadInitial
 
@@ -275,15 +237,16 @@ export default function DashboardDept({ fixedDept }) {
     const observer = new IntersectionObserver(
       (entries) => {
         const first = entries[0];
-        if (first.isIntersecting && !isLoading) {
-          if (isSearchingActive) {
-            if (searchHasMore && !searchIsFetchingMore) {
-              fetchSearchNext();
-            }
-          } else {
-            if (hasMore && !isFetchingMore) {
-              loadNext();
-            }
+        if (!first.isIntersecting) return;
+
+        // Call appropriate load function based on search state
+        if (isSearchingActive) {
+          if (searchHasMore && !searchIsFetchingMore && !isLoading) {
+            fetchSearchNext();
+          }
+        } else {
+          if (hasMore && !isFetchingMore && !isLoading) {
+            loadNext();
           }
         }
       },
@@ -296,61 +259,35 @@ export default function DashboardDept({ fixedDept }) {
     loadMoreRef,
     isSearchingActive,
     hasMore,
-    isFetchingMore,
     searchHasMore,
+    isFetchingMore,
     searchIsFetchingMore,
     isLoading,
   ]);
 
-  // clamp page when total docs change
+  // reset page when total docs change or clamp page to available pages
   useEffect(() => {
     // No longer needed for infinite scroll
   }, [totalDocs, PAGE_SIZE]);
 
-  useEffect(() => {
-    getCurrentPosition()
-      .then((p) => {
-        setMyLoc(p);
-        setLocMsg("Your location loaded");
-      })
-      .catch(() => {
-        setLocMsg("Location not available");
-      });
-  }, []);
-
-  // Check if a specific post can be edited
-  const canEditPost = (post) => {
-    if (post?.deleted || post?.status === "deleted") return false;
-    return (
-      profile?.role === "admin" ||
-      (profile?.role === "dept" && profile?.department === dept)
-    );
-  };
-
-  const postsWithDistance = useMemo(() => {
-    if (!myLoc) return posts;
-    return posts.map((p) => {
-      const d = distanceKm(myLoc, { lat: p.lat, lng: p.lng });
-      return { ...p, distanceKm: typeof d === "number" ? d : undefined };
-    });
-  }, [posts, myLoc]);
-
-  const filteredPostsWithDistance = useMemo(() => {
-    // All filtering (status, date, title) is now done in fetchSearch/fetchSearchNext
-    // This just returns postsWithDistance as-is
-    return postsWithDistance;
-  }, [postsWithDistance]);
+  // Filter posts by title when searching
+  const filteredPosts = useMemo(() => {
+    // All filtering (status, date, dept, title) is now done in fetchSearch/fetchSearchNext
+    // This just returns posts as-is
+    return posts;
+  }, [posts]);
 
   const handleApplySearch = () => {
     // Set applied filters FIRST before calling fetchSearch
     const trimmedSearch = searchText.trim();
     setAppliedSearch(trimmedSearch);
     setAppliedStatus(statusFilter);
+    setAppliedDept(deptFilter);
     setAppliedFrom(fromDate);
     setAppliedTo(toDate);
 
-    if (trimmedSearch || statusFilter || fromDate || toDate) {
-      fetchSearch(trimmedSearch, statusFilter, fromDate, toDate);
+    if (trimmedSearch || statusFilter || deptFilter || fromDate || toDate) {
+      fetchSearch(trimmedSearch, statusFilter, deptFilter, fromDate, toDate);
     }
     // persist to URL
     const next = new URLSearchParams(urlSearchParams);
@@ -358,6 +295,8 @@ export default function DashboardDept({ fixedDept }) {
     else next.delete("q");
     if (statusFilter) next.set("status", statusFilter);
     else next.delete("status");
+    if (deptFilter) next.set("dept", deptFilter);
+    else next.delete("dept");
     if (fromDate) next.set("from", fromDate);
     else next.delete("from");
     if (toDate) next.set("to", toDate);
@@ -367,49 +306,54 @@ export default function DashboardDept({ fixedDept }) {
 
   const handleClearSearch = () => {
     setSearchText("");
-    setAppliedSearch("");
     setStatusFilter("");
+    setDeptFilter("");
+    setAppliedSearch("");
     setAppliedStatus("");
+    setAppliedDept("");
     setFromDate("");
     setToDate("");
     setAppliedFrom("");
     setAppliedTo("");
-    // Reload base/initial reports
     loadInitial();
     // clear URL params
     const next = new URLSearchParams(urlSearchParams);
     next.delete("q");
     next.delete("status");
+    next.delete("dept");
     next.delete("from");
     next.delete("to");
     setUrlSearchParams(next, { replace: false });
   };
 
-  // Fetch posts matching department and status, then filter title client-side for flexibility
-  const fetchSearch = async (keyword, status, fromDate, toDate) => {
-    if (!dept) return;
+  const fetchSearch = async (keyword, status, dept, fromDate, toDate) => {
     setIsLoading(true);
     setPosts([]);
     setSearchLastVisible(null);
     setSearchHasMore(true);
     try {
-      // Only filter by department to avoid needing composite index
-      // Filter by status client-side instead
-      const q = query(
-        collection(db, "posts"),
-        where("departmentTag", "==", dept),
-        orderBy("createdAt", "desc"),
-        limit(PAGE_SIZE * 2)
-      );
+      const constraints = [];
+      if (dept) constraints.push(whereField("departmentTag", dept));
+      // Don't filter by status in query - do it client-side to avoid composite index
+
+      // Build Firestore query with dynamic where clauses and pagination
+      let qRef = collection(db, "posts");
+      let q = constraints.length
+        ? query(
+            qRef,
+            ...constraints,
+            orderBy("createdAt", "desc"),
+            limit(PAGE_SIZE * 2)
+          )
+        : query(qRef, orderBy("createdAt", "desc"), limit(PAGE_SIZE * 2));
+
       const snapshot = await getDocs(q);
       let list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
       // ALSO fetch ALL matching docs for accurate counts (without limit)
-      const countQuery = query(
-        collection(db, "posts"),
-        where("departmentTag", "==", dept),
-        orderBy("createdAt", "desc")
-      );
+      let countQuery = constraints.length
+        ? query(qRef, ...constraints, orderBy("createdAt", "desc"))
+        : query(qRef, orderBy("createdAt", "desc"));
       const countSnapshot = await getDocs(countQuery);
       let allList = countSnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
@@ -420,18 +364,15 @@ export default function DashboardDept({ fixedDept }) {
         // Filter by status client-side
         if (status) {
           if (status === "deleted") {
-            // Only show deleted posts if super-admin
             if (isSuperAdmin) {
               filtered = filtered.filter(
                 (p) => p.deleted || p.status === "deleted"
               );
             } else {
-              filtered = []; // Non-admins can't see deleted posts
+              filtered = [];
             }
           } else {
-            // Filter by specific status
             filtered = filtered.filter((p) => p.status === status);
-            // For non-super-admin, also filter out deleted posts
             if (!isSuperAdmin) {
               filtered = filtered.filter(
                 (p) => !p.deleted && p.status !== "deleted"
@@ -439,13 +380,12 @@ export default function DashboardDept({ fixedDept }) {
             }
           }
         } else if (!isSuperAdmin) {
-          // No status filter, but still filter out deleted posts for non-admins
           filtered = filtered.filter(
             (p) => !p.deleted && p.status !== "deleted"
           );
         }
 
-        // Apply date range filter client-side
+        // Apply date range filter
         if (fromDate || toDate) {
           const from = fromDate ? new Date(fromDate + "T00:00:00") : null;
           const to = toDate
@@ -466,7 +406,7 @@ export default function DashboardDept({ fixedDept }) {
           });
         }
 
-        // Apply title/keyword filter client-side
+        // Apply title filter
         if (keyword) {
           const ql = keyword.toLowerCase();
           filtered = filtered.filter((p) =>
@@ -496,46 +436,53 @@ export default function DashboardDept({ fixedDept }) {
 
       const pageList = list.slice(0, PAGE_SIZE);
       setPosts(pageList);
-      setLastVisible(null);
-      setError(null);
 
       // Set cursor to the doc matching the last shown item
       if (pageList.length > 0) {
         const lastShownId = pageList[pageList.length - 1].id;
-        const lastShownDoc = snapshot.docs.find((d) => d.id === lastShownId);
-        setSearchLastVisible(lastShownDoc || null);
+        const lastDoc =
+          snapshot.docs.find((d) => d.id === lastShownId) ||
+          snapshot.docs[snapshot.docs.length - 1] ||
+          null;
+        setSearchLastVisible(lastDoc);
       } else {
-        setSearchLastVisible(null);
+        setSearchLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
       }
+
       setSearchHasMore(snapshot.docs.length > PAGE_SIZE);
+      setError(null);
     } catch (err) {
       setError(err.message);
-      toast({
-        title: "Error running search",
-        description: err.message,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Load next page of filtered/searched posts
   const fetchSearchNext = async () => {
     if (!searchLastVisible || searchIsFetchingMore || !searchHasMore) return;
-    if (!dept) return;
     setSearchIsFetchingMore(true);
     try {
-      // Only filter by department to avoid needing composite index
-      const q = query(
-        collection(db, "posts"),
-        where("departmentTag", "==", dept),
-        orderBy("createdAt", "desc"),
-        startAfter(searchLastVisible),
-        limit(PAGE_SIZE * 2)
-      );
+      const constraints = [];
+      if (appliedDept)
+        constraints.push(whereField("departmentTag", appliedDept));
+      // Don't filter by status in query - do it client-side to avoid composite index
+
+      let qRef = collection(db, "posts");
+      let q = constraints.length
+        ? query(
+            qRef,
+            ...constraints,
+            orderBy("createdAt", "desc"),
+            startAfter(searchLastVisible),
+            limit(PAGE_SIZE * 2)
+          )
+        : query(
+            qRef,
+            orderBy("createdAt", "desc"),
+            startAfter(searchLastVisible),
+            limit(PAGE_SIZE * 2)
+          );
+
       const snapshot = await getDocs(q);
       let list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
@@ -560,14 +507,10 @@ export default function DashboardDept({ fixedDept }) {
         list = list.filter((p) => !p.deleted && p.status !== "deleted");
       }
 
-      // Apply date range filter client-side
+      // Apply client-side date & keyword filters
       if (appliedFrom || appliedTo) {
         const from = appliedFrom ? new Date(appliedFrom + "T00:00:00") : null;
-        const to = appliedTo
-          ? new Date(appliedTo + "T23:59:59.999")
-          : appliedFrom
-          ? new Date()
-          : null;
+        const to = appliedTo ? new Date(appliedTo + "T23:59:59.999") : null;
         list = list.filter((p) => {
           const ts = p.createdAt?.toDate
             ? p.createdAt.toDate()
@@ -580,8 +523,6 @@ export default function DashboardDept({ fixedDept }) {
           return true;
         });
       }
-
-      // Apply title/keyword filter client-side
       if (appliedSearch) {
         const ql = appliedSearch.toLowerCase();
         list = list.filter((p) => (p.title || "").toLowerCase().includes(ql));
@@ -592,80 +533,234 @@ export default function DashboardDept({ fixedDept }) {
 
       if (pageList.length > 0) {
         const lastShownId = pageList[pageList.length - 1].id;
-        const lastShownDoc = snapshot.docs.find((d) => d.id === lastShownId);
-        setSearchLastVisible(lastShownDoc || null);
+        const lastDoc =
+          snapshot.docs.find((d) => d.id === lastShownId) ||
+          snapshot.docs[snapshot.docs.length - 1] ||
+          null;
+        setSearchLastVisible(lastDoc);
+      } else {
+        setSearchLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
       }
+
       setSearchHasMore(snapshot.docs.length > PAGE_SIZE);
+      setError(null);
     } catch (err) {
       setError(err.message);
-      toast({
-        title: "Error loading more",
-        description: err.message,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
     } finally {
       setSearchIsFetchingMore(false);
     }
   };
 
-  // Initialize filters from URL on mount and when dept changes (wait for auth to finish loading)
-  // Note: We need profile.role in deps to ensure isSuperAdmin is correctly evaluated
+  // Initialize filters from URL on mount (wait for auth to finish loading)
   useEffect(() => {
     if (loading) return; // Wait for auth state to be determined
-    // Profile will be set when loading becomes false (either user profile or null)
-
+    // Don't load until we've determined the user's role (or confirmed no user)
+    // This prevents filtering deleted posts before we know if user is super-admin
+    
     const qParam = (urlSearchParams.get("q") || "").trim();
     const statusParam = urlSearchParams.get("status") || "";
+    const deptParam = urlSearchParams.get("dept") || "";
     const fromParam = urlSearchParams.get("from") || "";
     const toParam = urlSearchParams.get("to") || "";
-    if (qParam || statusParam || fromParam || toParam) {
+    if (qParam || statusParam || deptParam || fromParam || toParam) {
       setSearchText(qParam);
       setStatusFilter(statusParam);
+      setDeptFilter(deptParam);
       setAppliedSearch(qParam);
       setAppliedStatus(statusParam);
+      setAppliedDept(deptParam);
       setFromDate(fromParam);
       setToDate(toParam);
       setAppliedFrom(fromParam);
       setAppliedTo(toParam);
-      fetchSearch(qParam, statusParam, fromParam, toParam);
+      fetchSearch(qParam, statusParam, deptParam, fromParam, toParam);
     } else {
-      // no filters: load base
       loadInitial();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dept, loading, profile?.role]); // Re-run if dept, loading, or role changes
+  }, [loading]); // Only run when loading changes (profile is ready when loading becomes false)
 
-  const handleUpdate = async (postId) => {
-    const newStatus = statusMap[postId];
-    const actionNote = noteMap[postId] || "";
-    if (!newStatus) return;
-    try {
-      await updateDoc(doc(db, "posts", postId), {
-        status: newStatus,
-        actionNote,
-      });
-      toast({ title: "Updated", status: "success", duration: 1500 });
-      setStatusMap((prev) => ({ ...prev, [postId]: "" }));
-    } catch (err) {
-      toast({ title: "Error", description: err.message, status: "error" });
+  // helper to build where() with correct operator
+  const whereField = (field, value, isArrayContains = false) => {
+    if (isArrayContains) {
+      return where(field, "array-contains", value);
     }
+    return where(field, "==", value);
   };
 
   return (
-    <Container maxW="container.lg" pb={10}>
-      {!dept && (
-        <Alert status="warning" mb={4}>
-          <AlertIcon />
-          No department resolved from route or profile.
-        </Alert>
+    <Container maxW="container.lg" py={10}>
+      {showIntro && (
+        <>
+          <Box
+            bgGradient="linear(to-r, blue.500, teal.400)"
+            color="white"
+            borderRadius="2xl"
+            p={{ base: 6, md: 10 }}
+            mb={10}
+            textAlign="center"
+            boxShadow="none"
+            mx="auto"
+            maxW={{ base: "100%", md: "container.md" }}
+          >
+            <Heading size="xl" mb={4}>
+              Welcome to District Care
+            </Heading>
+            <Text fontSize="lg" maxW="700px" mx="auto">
+              Empowering citizens and departments to make our districts cleaner,
+              safer, and better — together.
+            </Text>
+            {/* darker, attention-grabbing blinking button */}
+            <Button
+              mt={6}
+              size="lg"
+              bgGradient="linear(to-r, blue.600, teal.500)"
+              color="white"
+              boxShadow="md"
+              _hover={{
+                bgGradient: "linear(to-r, blue.700, teal.600)",
+                transform: "translateY(-1px)",
+                animationPlayState: "paused",
+                opacity: 1,
+              }}
+              _active={{
+                bgGradient: "linear(to-r, blue.800, teal.700)",
+                transform: "translateY(0)",
+                animationPlayState: "paused",
+                opacity: 1,
+              }}
+              _focus={{
+                boxShadow: "outline",
+                animationPlayState: "paused",
+                opacity: 1,
+              }}
+              onClick={() => {
+                if (user) {
+                  navigate("/create");
+                } else {
+                  navigate("/login");
+                }
+              }}
+              animation={`${keyframes`
+                0%, 100% { opacity: 1; transform: translateY(0); }
+                50% { opacity: 0.5; transform: translateY(-2px); }
+              `} 1.2s ease-in-out infinite`}
+            >
+              Report an Issue
+            </Button>
+          </Box>
+
+          <Box
+            bg="white"
+            // borderWidth="1px"
+            // borderRadius="2xl"
+            p={6}
+            mb={10}
+            boxShadow="none"
+            mx="auto"
+            maxW={{ base: "100%", md: "container.md" }}
+          >
+            <Heading size="md" mb={3} textAlign="center">
+              About District Care
+            </Heading>
+            <Text
+              color="gray.600"
+              textAlign={{ base: "justify", md: "center" }}
+              fontStyle="italic"
+            >
+              District Care is a community-driven platform that bridges the gap
+              between citizens and local government departments. Users can
+              report local issues like road damage, garbage collection, or water
+              leakage with photos, descriptions, and locations. Departments can
+              track, respond, and resolve these issues in real time, ensuring
+              transparency and accountability.
+            </Text>
+          </Box>
+
+          <VStack spacing={8} mb={10}>
+            <Heading size="md">How It Works</Heading>
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
+              <Box
+                textAlign="center"
+                p={6}
+                bg="gray.50"
+                borderRadius="xl"
+                boxShadow="none"
+                transition="0.3s"
+                mx="auto"
+              >
+                <Icon
+                  as={FaMapMarkerAlt}
+                  boxSize={10}
+                  color="blue.500"
+                  mb={3}
+                />
+                <Heading size="sm" mb={2}>
+                  1️⃣ Report an Issue
+                </Heading>
+                <Text fontSize="sm" color="gray.600">
+                  Upload a photo, add details, and share the exact location of
+                  the problem.
+                </Text>
+              </Box>
+
+              <Box
+                textAlign="center"
+                p={6}
+                bg="gray.50"
+                borderRadius="xl"
+                boxShadow="none"
+                transition="0.3s"
+                mx="auto"
+              >
+                <Icon
+                  as={FaHandsHelping}
+                  boxSize={10}
+                  color="teal.500"
+                  mb={3}
+                />
+                <Heading size="sm" mb={2}>
+                  2️⃣ Department Action
+                </Heading>
+                <Text fontSize="sm" color="gray.600">
+                  The issue is assigned to the respective department for review
+                  and action.
+                </Text>
+              </Box>
+
+              <Box
+                textAlign="center"
+                p={6}
+                bg="gray.50"
+                borderRadius="xl"
+                boxShadow="none"
+                transition="0.3s"
+                mx="auto"
+              >
+                <Icon
+                  as={FaRegLightbulb}
+                  boxSize={10}
+                  color="orange.400"
+                  mb={3}
+                />
+                <Heading size="sm" mb={2}>
+                  3️⃣ Real-time Updates
+                </Heading>
+                <Text fontSize="sm" color="gray.600">
+                  Citizens can track the progress, receive updates, and see when
+                  the issue is resolved.
+                </Text>
+              </Box>
+            </SimpleGrid>
+          </VStack>
+
+          <Divider mb={8} />
+        </>
       )}
 
-      <HStack justify="space-between" mb={4} align="center" wrap="wrap" gap={2}>
-        <Heading size="md">{dept || "Dashboard"}</Heading>
+      <HStack justify="space-between" mb={5} align="center" wrap="wrap" gap={2}>
+        <Heading size="md">Recent Reports</Heading>
 
-        {/* Status summary - centered, labels use gradient text (or purple fallback), counts in black */}
         <HStack spacing={{ base: 3, md: 6 }} align="center">
           <Stat textAlign="center">
             <StatLabel
@@ -751,32 +846,7 @@ export default function DashboardDept({ fixedDept }) {
         </HStack>
       </HStack>
 
-      <HStack mb={4} justify="space-between" wrap="wrap" gap={2}>
-        <Text fontSize="sm" color="gray.600">
-          {locMsg}
-        </Text>
-        {myLoc && (
-          <Text fontSize="sm">
-            You: {myLoc.lat.toFixed(4)}, {myLoc.lng.toFixed(4)} ·{" "}
-            <Link
-              href={googleMapsLink(myLoc.lat, myLoc.lng)}
-              isExternal
-              color="blue.500"
-            >
-              Open in Maps
-            </Link>
-          </Text>
-        )}
-      </HStack>
-
-      {error && (
-        <Alert status="error" mb={4}>
-          <AlertIcon />
-          {error}
-        </Alert>
-      )}
-
-      {/* Search controls for recent reports */}
+      {/* Search controls for Home feed */}
       <VStack align="stretch" spacing={2} mb={4}>
         {/* Search bar - full width on mobile, on separate line */}
         <InputGroup w="100%">
@@ -799,6 +869,22 @@ export default function DashboardDept({ fixedDept }) {
           wrap={{ base: "wrap", md: "wrap", lg: "nowrap" }}
           w="100%"
         >
+          <Select
+            placeholder="Department (all)"
+            value={deptFilter}
+            onChange={(e) => setDeptFilter(e.target.value)}
+            bg="white"
+            size="md"
+            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+            minW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
+            maxW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
+            borderRadius="md"
+          >
+            <option value="Electricity">Electricity</option>
+            <option value="Water">Water</option>
+            <option value="Sewage">Sewage</option>
+            <option value="Road">Road</option>
+          </Select>
           <Select
             placeholder="Status (all)"
             value={statusFilter}
@@ -856,7 +942,13 @@ export default function DashboardDept({ fixedDept }) {
           <Button
             colorScheme="blue"
             onClick={handleApplySearch}
-            isDisabled={!hasTyped && !hasStatusSelected && !fromDate && !toDate}
+            isDisabled={
+              !hasTyped &&
+              !hasStatusSelected &&
+              !deptFilter &&
+              !fromDate &&
+              !toDate
+            }
             size="md"
             flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
             minW={{ base: "calc(50% - 6px)", md: "110px", lg: "100px" }}
@@ -876,8 +968,15 @@ export default function DashboardDept({ fixedDept }) {
         </HStack>
       </VStack>
 
+      {error && (
+        <Alert status="error" mb={4}>
+          <AlertIcon />
+          {error}
+        </Alert>
+      )}
+
       {isLoading ? (
-        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
           {Array.from({ length: PAGE_SIZE }).map((_, i) => (
             <Box
               key={`skeleton-${i}`}
@@ -887,80 +986,34 @@ export default function DashboardDept({ fixedDept }) {
               bg="white"
               p={4}
             >
-              <Skeleton height="160px" mb={3} borderRadius="md" />
+              <Skeleton height="180px" mb={3} borderRadius="md" />
               <SkeletonText mt="4" noOfLines={3} spacing="4" />
             </Box>
           ))}
         </SimpleGrid>
-      ) : filteredPostsWithDistance.length === 0 ? (
-        <Box textAlign="center" py={10} color="gray.600">
-          <Text>No relavent reports</Text>
-        </Box>
+      ) : (
+          isSearchingActive ? filteredPosts.length === 0 : posts.length === 0
+        ) ? (
+        isSearchingActive ? (
+          <Box textAlign="center" py={10} color="gray.600">
+            No relavent reports
+          </Box>
+        ) : (
+          <Box textAlign="center" py={10} color="gray.500">
+            No reports yet. Be the first to make a difference!
+          </Box>
+        )
       ) : (
         <>
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-            {(isSearchingActive
-              ? filteredPostsWithDistance
-              : filteredPostsWithDistance
-            ).map((p) => (
-              <Box
-                key={p.id}
-                borderWidth="1px"
-                borderRadius="md"
-                overflow="hidden"
-                bg="white"
-              >
-                <PostCard post={p} />
-                {canEditPost(p) && (
-                  <VStack align="stretch" spacing={3} p={3}>
-                    <Select
-                      placeholder="Change status"
-                      value={statusMap[p.id] || ""}
-                      onChange={(e) =>
-                        setStatusMap((prev) => ({
-                          ...prev,
-                          [p.id]: e.target.value,
-                        }))
-                      }
-                      isDisabled={p.deleted || p.status === "deleted"}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="resolved">Resolved</option>
-                      <option value="rejected">Rejected</option>
-                    </Select>
-                    <Textarea
-                      placeholder="Action note (optional)"
-                      value={noteMap[p.id] || ""}
-                      onChange={(e) =>
-                        setNoteMap((prev) => ({
-                          ...prev,
-                          [p.id]: e.target.value,
-                        }))
-                      }
-                      isDisabled={p.deleted || p.status === "deleted"}
-                    />
-                    <Button
-                      colorScheme="blue"
-                      onClick={() => handleUpdate(p.id)}
-                      isDisabled={p.deleted || p.status === "deleted"}
-                    >
-                      Save
-                    </Button>
-                  </VStack>
-                )}
-              </Box>
+          {/* Infinite scroll grid */}
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+            {(isSearchingActive ? filteredPosts : posts).map((post) => (
+              <PostCard key={post.id} post={post} />
             ))}
           </SimpleGrid>
 
           {/* Sentinel for infinite scroll */}
-          <Box
-            ref={loadMoreRef}
-            textAlign="center"
-            py={4}
-            color="gray.600"
-            mt={4}
-          >
+          <Box ref={loadMoreRef} textAlign="center" py={4} color="gray.600">
             {isSearchingActive ? (
               searchIsFetchingMore ? (
                 <HStack justify="center">
@@ -985,12 +1038,8 @@ export default function DashboardDept({ fixedDept }) {
           </Box>
         </>
       )}
-
-      {/* loading state handled inline with skeletons above */}
     </Container>
   );
 }
 
-// 4) add an notification icon on the navbar near the left-side of user identity(admin, public,etc...). this feature will notify the change in status and action note stated by the admin. Like once the admin reply or make any changes on the user's post it should notify the user on the notification feature. there should be an bell icon with the number of the notification
-// the moblie view is perfectly okay, but in desktop view make the search and clear button on the same line to the dropdowns and from and to dates.
 // came back

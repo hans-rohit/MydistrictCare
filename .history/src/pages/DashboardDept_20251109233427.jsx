@@ -51,7 +51,7 @@ export default function DashboardDept({ fixedDept }) {
   const params = useParams();
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const routeDept = params.dept;
-  const { profile, loading } = useAuth();
+  const { profile } = useAuth();
 
   // Resolve department: prop > route param > profile
   const dept = fixedDept || routeDept || profile?.department || null;
@@ -105,7 +105,6 @@ export default function DashboardDept({ fixedDept }) {
     !!appliedTo;
 
   // Get total count of documents (for pagination tracking only)
-  // Note: Don't include isSuperAdmin in deps to avoid re-running when profile loads
   useEffect(() => {
     if (!dept) return;
     const q = query(
@@ -132,8 +131,7 @@ export default function DashboardDept({ fixedDept }) {
       (err) => setError(err.message)
     );
     return () => unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dept]); // Only re-run when dept changes, not when isSuperAdmin changes
+  }, [dept, isSuperAdmin]);
 
   // Fetch paginated data - Load initial and append next pages for infinite scroll
   const loadInitial = async () => {
@@ -610,11 +608,9 @@ export default function DashboardDept({ fixedDept }) {
     }
   };
 
-  // Initialize filters from URL on mount and when dept changes (wait for auth to finish loading)
-  // Note: We need profile.role in deps to ensure isSuperAdmin is correctly evaluated
+  // Initialize filters from URL on mount and when dept changes (wait for profile)
   useEffect(() => {
-    if (loading) return; // Wait for auth state to be determined
-    // Profile will be set when loading becomes false (either user profile or null)
+    if (!profile) return; // Wait for profile to load
 
     const qParam = (urlSearchParams.get("q") || "").trim();
     const statusParam = urlSearchParams.get("status") || "";
@@ -635,7 +631,7 @@ export default function DashboardDept({ fixedDept }) {
       loadInitial();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dept, loading, profile?.role]); // Re-run if dept, loading, or role changes
+  }, [dept, profile]); // Run when dept or profile changes
 
   const handleUpdate = async (postId) => {
     const newStatus = statusMap[postId];
