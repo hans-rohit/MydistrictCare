@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
   collection,
@@ -37,6 +37,7 @@ import {
   Link,
   Skeleton,
   SkeletonText,
+  Spinner,
 } from "@chakra-ui/react";
 import { SearchIcon } from "@chakra-ui/icons";
 import PostCard from "../components/PostCard";
@@ -61,10 +62,12 @@ export default function DashboardDept({ fixedDept }) {
   const [noteMap, setNoteMap] = useState({});
   const [myLoc, setMyLoc] = useState(null);
   const [locMsg, setLocMsg] = useState("");
-  const [page, setPage] = useState(1);
   const [totalDocs, setTotalDocs] = useState(0);
   const [lastVisible, setLastVisible] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const loadMoreRef = useRef(null);
   const [searchText, setSearchText] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(""); // '' means all
@@ -76,6 +79,16 @@ export default function DashboardDept({ fixedDept }) {
   // Show 6 items per page for department dashboards
   const PAGE_SIZE = 6;
   const toast = useToast();
+
+  const isSuperAdmin = profile?.role === "admin";
+
+  const hasTyped = searchText.trim().length > 0;
+  const hasStatusSelected = !!statusFilter;
+  const isSearchingActive =
+    appliedSearch.trim().length > 0 ||
+    !!appliedStatus ||
+    !!appliedFrom ||
+    !!appliedTo;
 
   // Get total count of documents
   useEffect(() => {
@@ -95,10 +108,13 @@ export default function DashboardDept({ fixedDept }) {
     return () => unsub();
   }, [dept]);
 
-  // Fetch paginated data
-  const fetchPage = async (pageNum, cursor = null) => {
+  // Fetch paginated data - Load initial and append next pages for infinite scroll
+  const loadInitial = async () => {
     if (!dept) return;
     setIsLoading(true);
+    setPosts([]);
+    setLastVisible(null);
+    setHasMore(true);
     try {
       let q = query(
         collection(db, "posts"),
@@ -106,16 +122,6 @@ export default function DashboardDept({ fixedDept }) {
         orderBy("createdAt", "desc"),
         limit(PAGE_SIZE * 2) // Fetch more to account for filtered deleted posts
       );
-
-      if (cursor) {
-        q = query(
-          collection(db, "posts"),
-          where("departmentTag", "==", dept),
-          orderBy("createdAt", "desc"),
-          startAfter(cursor),
-          limit(PAGE_SIZE * 2)
-        );
-      }
 
       const snapshot = await getDocs(q);
       let list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -125,10 +131,23 @@ export default function DashboardDept({ fixedDept }) {
         list = list.filter((p) => !p.deleted && p.status !== "deleted");
       }
 
-      // Limit to PAGE_SIZE after filtering
-      list = list.slice(0, PAGE_SIZE);
-      setPosts(list);
-      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      const pageList = list.slice(0, PAGE_SIZE);
+      setPosts(pageList);
+
+      // Set cursor to the doc matching the last shown item
+      if (pageList.length > 0) {
+        const lastShownId = pageList[pageList.length - 1].id;
+        const lastDoc =
+          snapshot.docs.find((d) => d.id === lastShownId) ||
+          snapshot.docs[snapshot.docs.length - 1] ||
+          null;
+        setLastVisible(lastDoc);
+      } else {
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
+      }
+
+      if (totalDocs > 0) setHasMore(pageList.length < totalDocs);
+      else setHasMore(snapshot.docs.length > PAGE_SIZE);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -144,15 +163,84 @@ export default function DashboardDept({ fixedDept }) {
     }
   };
 
+  const loadNext = async () => {
+    if (!dept || !lastVisible || isFetchingMore || !hasMore) return;
+    setIsFetchingMore(true);
+    try {
+      const q = query(
+        collection(db, "posts"),
+        where("departmentTag", "==", dept),
+        orderBy("createdAt", "desc"),
+        startAfter(lastVisible),
+        limit(PAGE_SIZE * 2)
+      );
+      const snapshot = await getDocs(q);
+      let list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      if (!isSuperAdmin) {
+        list = list.filter((p) => !p.deleted && p.status !== "deleted");
+      }
+      const pageList = list.slice(0, PAGE_SIZE);
+      setPosts((prev) => {
+        const newPosts = [...prev, ...pageList];
+        if (totalDocs > 0) setHasMore(newPosts.length < totalDocs);
+        else setHasMore(snapshot.docs.length > PAGE_SIZE);
+        return newPosts;
+      });
+
+      if (pageList.length > 0) {
+        const lastShownId = pageList[pageList.length - 1].id;
+        const lastDoc =
+          snapshot.docs.find((d) => d.id === lastShownId) ||
+          snapshot.docs[snapshot.docs.length - 1] ||
+          null;
+        setLastVisible(lastDoc);
+      } else {
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
+      }
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      toast({
+        title: "Error loading more posts",
+        description: err.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsFetchingMore(false);
+    }
+  };
+
   // Fetch initial page
   useEffect(() => {
-    fetchPage(1);
+    if (isSearchingActive) return; // Skip if searching
+    loadInitial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dept]);
+
+  // IntersectionObserver to load more when sentinel is visible
+  useEffect(() => {
+    if (isSearchingActive) return; // Disable infinite scroll during search
+    const node = loadMoreRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting && hasMore && !isFetchingMore && !isLoading) {
+          loadNext();
+        }
+      },
+      { root: null, rootMargin: "200px", threshold: 0.25 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadMoreRef, isSearchingActive, hasMore, isFetchingMore, isLoading]);
 
   // clamp page when total docs change
   useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(totalDocs / PAGE_SIZE));
-    if (page > totalPages) setPage(totalPages);
+    // No longer needed for infinite scroll
   }, [totalDocs, PAGE_SIZE]);
 
   useEffect(() => {
@@ -165,8 +253,6 @@ export default function DashboardDept({ fixedDept }) {
         setLocMsg("Location not available");
       });
   }, []);
-
-  const isSuperAdmin = profile?.role === "admin";
 
   const counts = useMemo(() => {
     const c = {
@@ -234,14 +320,6 @@ export default function DashboardDept({ fixedDept }) {
     );
   }, [postsWithDistance, appliedSearch, appliedStatus, appliedFrom, appliedTo]);
 
-  const hasTyped = searchText.trim().length > 0;
-  const hasStatusSelected = !!statusFilter;
-  const isSearchingActive =
-    appliedSearch.trim().length > 0 ||
-    !!appliedStatus ||
-    !!appliedFrom ||
-    !!appliedTo;
-
   const handleApplySearch = () => {
     setAppliedSearch(searchText.trim());
     setAppliedStatus(statusFilter);
@@ -249,7 +327,6 @@ export default function DashboardDept({ fixedDept }) {
     setAppliedTo(toDate);
     if (searchText.trim() || statusFilter || fromDate || toDate) {
       fetchSearch(searchText.trim(), statusFilter);
-      setPage(1);
     }
     // persist to URL
     const next = new URLSearchParams(urlSearchParams);
@@ -261,7 +338,6 @@ export default function DashboardDept({ fixedDept }) {
     else next.delete("from");
     if (toDate) next.set("to", toDate);
     else next.delete("to");
-    next.set("p", "1");
     setUrlSearchParams(next, { replace: false });
   };
 
@@ -275,15 +351,13 @@ export default function DashboardDept({ fixedDept }) {
     setAppliedFrom("");
     setAppliedTo("");
     // Reload base/initial reports
-    setPage(1);
-    fetchPage(1);
+    loadInitial();
     // clear URL params
     const next = new URLSearchParams(urlSearchParams);
     next.delete("q");
     next.delete("status");
     next.delete("from");
     next.delete("to");
-    next.set("p", "1");
     setUrlSearchParams(next, { replace: false });
   };
 
@@ -337,7 +411,6 @@ export default function DashboardDept({ fixedDept }) {
     const statusParam = urlSearchParams.get("status") || "";
     const fromParam = urlSearchParams.get("from") || "";
     const toParam = urlSearchParams.get("to") || "";
-    const pageParam = parseInt(urlSearchParams.get("p") || "1", 10) || 1;
     if (qParam || statusParam || fromParam || toParam) {
       setSearchText(qParam);
       setStatusFilter(statusParam);
@@ -347,49 +420,10 @@ export default function DashboardDept({ fixedDept }) {
       setToDate(toParam);
       setAppliedFrom(fromParam);
       setAppliedTo(toParam);
-      setPage(pageParam);
       fetchSearch(qParam, statusParam);
     } else {
       // no filters: load base
-      setPage(pageParam);
-      if (pageParam === 1) {
-        fetchPage(1);
-      } else {
-        // Need to fetch previous pages to get to the desired page
-        const fetchToPage = async () => {
-          let cursor = null;
-          for (let i = 1; i < pageParam; i++) {
-            let q = query(
-              collection(db, "posts"),
-              where("departmentTag", "==", dept),
-              orderBy("createdAt", "desc"),
-              limit(PAGE_SIZE)
-            );
-            if (cursor) {
-              q = query(
-                collection(db, "posts"),
-                where("departmentTag", "==", dept),
-                orderBy("createdAt", "desc"),
-                startAfter(cursor),
-                limit(PAGE_SIZE)
-              );
-            }
-            const snapshot = await getDocs(q);
-            if (snapshot.docs.length > 0) {
-              cursor = snapshot.docs[snapshot.docs.length - 1];
-            } else {
-              break;
-            }
-          }
-          if (cursor) {
-            fetchPage(pageParam, cursor);
-          } else {
-            fetchPage(1);
-            setPage(1);
-          }
-        };
-        if (dept) fetchToPage();
-      }
+      loadInitial();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dept]);
@@ -635,164 +669,85 @@ export default function DashboardDept({ fixedDept }) {
           <Text>No relavent reports</Text>
         </Box>
       ) : (
-        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-          {(isSearchingActive
-            ? filteredPostsWithDistance.slice(
-                (page - 1) * PAGE_SIZE,
-                page * PAGE_SIZE
-              )
-            : filteredPostsWithDistance
-          ).map((p) => (
+        <>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            {(isSearchingActive
+              ? filteredPostsWithDistance
+              : filteredPostsWithDistance
+            ).map((p) => (
+              <Box
+                key={p.id}
+                borderWidth="1px"
+                borderRadius="md"
+                overflow="hidden"
+                bg="white"
+              >
+                <PostCard post={p} />
+                {canEditPost(p) && (
+                  <VStack align="stretch" spacing={3} p={3}>
+                    <Select
+                      placeholder="Change status"
+                      value={statusMap[p.id] || ""}
+                      onChange={(e) =>
+                        setStatusMap((prev) => ({
+                          ...prev,
+                          [p.id]: e.target.value,
+                        }))
+                      }
+                      isDisabled={p.deleted || p.status === "deleted"}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="resolved">Resolved</option>
+                      <option value="rejected">Rejected</option>
+                    </Select>
+                    <Textarea
+                      placeholder="Action note (optional)"
+                      value={noteMap[p.id] || ""}
+                      onChange={(e) =>
+                        setNoteMap((prev) => ({
+                          ...prev,
+                          [p.id]: e.target.value,
+                        }))
+                      }
+                      isDisabled={p.deleted || p.status === "deleted"}
+                    />
+                    <Button
+                      colorScheme="blue"
+                      onClick={() => handleUpdate(p.id)}
+                      isDisabled={p.deleted || p.status === "deleted"}
+                    >
+                      Save
+                    </Button>
+                  </VStack>
+                )}
+              </Box>
+            ))}
+          </SimpleGrid>
+
+          {/* Sentinel for infinite scroll (only when not searching) */}
+          {!isSearchingActive && (
             <Box
-              key={p.id}
-              borderWidth="1px"
-              borderRadius="md"
-              overflow="hidden"
-              bg="white"
+              ref={loadMoreRef}
+              textAlign="center"
+              py={4}
+              color="gray.600"
+              mt={4}
             >
-              <PostCard post={p} />
-              {canEditPost(p) && (
-                <VStack align="stretch" spacing={3} p={3}>
-                  <Select
-                    placeholder="Change status"
-                    value={statusMap[p.id] || ""}
-                    onChange={(e) =>
-                      setStatusMap((prev) => ({
-                        ...prev,
-                        [p.id]: e.target.value,
-                      }))
-                    }
-                    isDisabled={p.deleted || p.status === "deleted"}
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="rejected">Rejected</option>
-                  </Select>
-                  <Textarea
-                    placeholder="Action note (optional)"
-                    value={noteMap[p.id] || ""}
-                    onChange={(e) =>
-                      setNoteMap((prev) => ({
-                        ...prev,
-                        [p.id]: e.target.value,
-                      }))
-                    }
-                    isDisabled={p.deleted || p.status === "deleted"}
-                  />
-                  <Button
-                    colorScheme="blue"
-                    onClick={() => handleUpdate(p.id)}
-                    isDisabled={p.deleted || p.status === "deleted"}
-                  >
-                    Save
-                  </Button>
-                </VStack>
+              {isFetchingMore ? (
+                <HStack justify="center">
+                  <Spinner size="sm" />
+                  <Text>Loading more...</Text>
+                </HStack>
+              ) : hasMore ? (
+                <Text>Scroll to load more</Text>
+              ) : (
+                <Text>No more reports</Text>
               )}
             </Box>
-          ))}
-        </SimpleGrid>
+          )}
+        </>
       )}
-
-      {/* Truncated Pagination controls */}
-      {(!isSearchingActive && totalDocs > PAGE_SIZE) ||
-      (isSearchingActive &&
-        (filteredPostsWithDistance.length > PAGE_SIZE || page > 1)) ? (
-        <HStack spacing={2} justifyContent="center" mt={6}>
-          <Button
-            size="sm"
-            onClick={() => {
-              const newPage = Math.max(1, page - 1);
-              setPage(newPage);
-              if (!isSearchingActive) {
-                fetchPage(newPage);
-              }
-              const next = new URLSearchParams(urlSearchParams);
-              next.set("p", String(newPage));
-              setUrlSearchParams(next, { replace: false });
-            }}
-            isDisabled={page === 1 || isLoading}
-          >
-            Prev
-          </Button>
-
-          {(() => {
-            const totalPages = isSearchingActive
-              ? Math.ceil(filteredPostsWithDistance.length / PAGE_SIZE)
-              : Math.ceil(totalDocs / PAGE_SIZE);
-            const pageNumbers = [];
-
-            // Always show first page
-            if (page > 3) pageNumbers.push(1);
-            if (page > 4) pageNumbers.push("...");
-
-            // Show pages around current page
-            for (
-              let i = Math.max(1, page - 2);
-              i <= Math.min(totalPages, page + 2);
-              i++
-            ) {
-              pageNumbers.push(i);
-            }
-
-            // Always show last page
-            if (page < totalPages - 3) pageNumbers.push("...");
-            if (page < totalPages - 2) pageNumbers.push(totalPages);
-
-            return pageNumbers.map((pageNum, index) => {
-              if (pageNum === "...") {
-                return (
-                  <Text key={`ellipsis-${index}`} color="gray.500">
-                    ...
-                  </Text>
-                );
-              }
-              return (
-                <Button
-                  key={pageNum}
-                  size="sm"
-                  variant={pageNum === page ? "solid" : "outline"}
-                  colorScheme={pageNum === page ? "blue" : "gray"}
-                  onClick={() => {
-                    setPage(pageNum);
-                    if (!isSearchingActive) fetchPage(pageNum);
-                    const next = new URLSearchParams(urlSearchParams);
-                    next.set("p", String(pageNum));
-                    setUrlSearchParams(next, { replace: false });
-                  }}
-                  isDisabled={isLoading}
-                >
-                  {pageNum}
-                </Button>
-              );
-            });
-          })()}
-
-          <Button
-            size="sm"
-            onClick={() => {
-              const newPage = page + 1;
-              setPage(newPage);
-              if (!isSearchingActive) {
-                fetchPage(newPage, lastVisible);
-              }
-              const next = new URLSearchParams(urlSearchParams);
-              next.set("p", String(newPage));
-              setUrlSearchParams(next, { replace: false });
-            }}
-            isDisabled={
-              isLoading ||
-              (!isSearchingActive &&
-                page === Math.ceil(totalDocs / PAGE_SIZE)) ||
-              (isSearchingActive &&
-                page ===
-                  Math.ceil(filteredPostsWithDistance.length / PAGE_SIZE))
-            }
-          >
-            Next
-          </Button>
-        </HStack>
-      ) : null}
 
       {/* loading state handled inline with skeletons above */}
     </Container>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   collection,
   onSnapshot,
@@ -32,6 +32,7 @@ import {
   InputGroup,
   InputLeftElement,
   Select,
+  Spinner,
 } from "@chakra-ui/react";
 import { SearchIcon } from "@chakra-ui/icons";
 import { keyframes } from "@emotion/react";
@@ -45,7 +46,6 @@ export default function Home({ showIntro = true }) {
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
   const [error, setError] = useState(null);
-  const [page, setPage] = useState(1);
   const [totalDocs, setTotalDocs] = useState(0);
   const [counts, setCounts] = useState({
     total: 0,
@@ -56,6 +56,9 @@ export default function Home({ showIntro = true }) {
   });
   const [lastVisible, setLastVisible] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const loadMoreRef = useRef(null);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState(""); // '' means all
   const [deptFilter, setDeptFilter] = useState(""); // '' means all
@@ -71,6 +74,16 @@ export default function Home({ showIntro = true }) {
 
   const { profile } = useAuth();
   const isSuperAdmin = profile?.role === "admin";
+
+  const hasTyped = searchText.trim().length > 0;
+  const hasStatusSelected = !!statusFilter;
+  const hasDeptSelected = !!deptFilter;
+  const isSearchingActive =
+    appliedSearch.trim().length > 0 ||
+    !!appliedStatus ||
+    !!appliedDept ||
+    !!appliedFrom ||
+    !!appliedTo;
 
   // Get total count of documents
   useEffect(() => {
@@ -108,24 +121,18 @@ export default function Home({ showIntro = true }) {
     return () => unsub();
   }, [isSuperAdmin]);
 
-  // Fetch paginated data
-  const fetchPage = async (pageNum, cursor = null) => {
+  // Fetch paginated data - Load initial and append next pages for infinite scroll
+  const loadInitial = async () => {
     setIsLoading(true);
+    setPosts([]);
+    setLastVisible(null);
+    setHasMore(true);
     try {
       let q = query(
         collection(db, "posts"),
         orderBy("createdAt", "desc"),
         limit(PAGE_SIZE * 2) // Fetch more to account for filtered deleted posts
       );
-
-      if (cursor) {
-        q = query(
-          collection(db, "posts"),
-          orderBy("createdAt", "desc"),
-          startAfter(cursor),
-          limit(PAGE_SIZE * 2)
-        );
-      }
 
       const snapshot = await getDocs(q);
       let list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -135,10 +142,23 @@ export default function Home({ showIntro = true }) {
         list = list.filter((p) => !p.deleted && p.status !== "deleted");
       }
 
-      // Limit to PAGE_SIZE after filtering
-      list = list.slice(0, PAGE_SIZE);
-      setPosts(list);
-      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      const pageList = list.slice(0, PAGE_SIZE);
+      setPosts(pageList);
+
+      // Set cursor to the doc matching the last shown item
+      if (pageList.length > 0) {
+        const lastShownId = pageList[pageList.length - 1].id;
+        const lastDoc =
+          snapshot.docs.find((d) => d.id === lastShownId) ||
+          snapshot.docs[snapshot.docs.length - 1] ||
+          null;
+        setLastVisible(lastDoc);
+      } else {
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
+      }
+
+      if (totalDocs > 0) setHasMore(pageList.length < totalDocs);
+      else setHasMore(snapshot.docs.length > PAGE_SIZE);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -147,27 +167,77 @@ export default function Home({ showIntro = true }) {
     }
   };
 
+  const loadNext = async () => {
+    if (!lastVisible || isFetchingMore || !hasMore) return;
+    setIsFetchingMore(true);
+    try {
+      const q = query(
+        collection(db, "posts"),
+        orderBy("createdAt", "desc"),
+        startAfter(lastVisible),
+        limit(PAGE_SIZE * 2)
+      );
+      const snapshot = await getDocs(q);
+      let list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      if (!isSuperAdmin) {
+        list = list.filter((p) => !p.deleted && p.status !== "deleted");
+      }
+      const pageList = list.slice(0, PAGE_SIZE);
+      setPosts((prev) => {
+        const newPosts = [...prev, ...pageList];
+        if (totalDocs > 0) setHasMore(newPosts.length < totalDocs);
+        else setHasMore(snapshot.docs.length > PAGE_SIZE);
+        return newPosts;
+      });
+
+      if (pageList.length > 0) {
+        const lastShownId = pageList[pageList.length - 1].id;
+        const lastDoc =
+          snapshot.docs.find((d) => d.id === lastShownId) ||
+          snapshot.docs[snapshot.docs.length - 1] ||
+          null;
+        setLastVisible(lastDoc);
+      } else {
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
+      }
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsFetchingMore(false);
+    }
+  };
+
   // Fetch initial page
   useEffect(() => {
-    fetchPage(1);
+    if (isSearchingActive) return; // Skip if searching
+    loadInitial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // IntersectionObserver to load more when sentinel is visible
+  useEffect(() => {
+    if (isSearchingActive) return; // Disable infinite scroll during search
+    const node = loadMoreRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting && hasMore && !isFetchingMore && !isLoading) {
+          loadNext();
+        }
+      },
+      { root: null, rootMargin: "200px", threshold: 0.25 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadMoreRef, isSearchingActive, hasMore, isFetchingMore, isLoading]);
 
   // reset page when total docs change or clamp page to available pages
   useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(totalDocs / PAGE_SIZE));
-    if (page > totalPages) setPage(totalPages);
-    if (totalDocs > 0 && page === 0) setPage(1);
+    // No longer needed for infinite scroll
   }, [totalDocs, PAGE_SIZE]);
-
-  const hasTyped = searchText.trim().length > 0;
-  const hasStatusSelected = !!statusFilter;
-  const hasDeptSelected = !!deptFilter;
-  const isSearchingActive =
-    appliedSearch.trim().length > 0 ||
-    !!appliedStatus ||
-    !!appliedDept ||
-    !!appliedFrom ||
-    !!appliedTo;
 
   // Filter posts by title when searching
   const filteredPosts = useMemo(() => {
@@ -186,7 +256,6 @@ export default function Home({ showIntro = true }) {
     setAppliedTo(toDate);
     if (searchText.trim() || statusFilter || deptFilter || fromDate || toDate) {
       fetchSearch(searchText.trim(), statusFilter, deptFilter);
-      setPage(1);
     }
     // persist to URL
     const next = new URLSearchParams(urlSearchParams);
@@ -200,7 +269,6 @@ export default function Home({ showIntro = true }) {
     else next.delete("from");
     if (toDate) next.set("to", toDate);
     else next.delete("to");
-    next.set("p", "1");
     setUrlSearchParams(next, { replace: false });
   };
 
@@ -215,8 +283,7 @@ export default function Home({ showIntro = true }) {
     setToDate("");
     setAppliedFrom("");
     setAppliedTo("");
-    setPage(1);
-    fetchPage(1);
+    loadInitial();
     // clear URL params
     const next = new URLSearchParams(urlSearchParams);
     next.delete("q");
@@ -224,7 +291,6 @@ export default function Home({ showIntro = true }) {
     next.delete("dept");
     next.delete("from");
     next.delete("to");
-    next.set("p", "1");
     setUrlSearchParams(next, { replace: false });
   };
 
@@ -297,7 +363,6 @@ export default function Home({ showIntro = true }) {
     const deptParam = urlSearchParams.get("dept") || "";
     const fromParam = urlSearchParams.get("from") || "";
     const toParam = urlSearchParams.get("to") || "";
-    const pageParam = parseInt(urlSearchParams.get("p") || "1", 10) || 1;
     if (qParam || statusParam || deptParam || fromParam || toParam) {
       setSearchText(qParam);
       setStatusFilter(statusParam);
@@ -309,46 +374,9 @@ export default function Home({ showIntro = true }) {
       setToDate(toParam);
       setAppliedFrom(fromParam);
       setAppliedTo(toParam);
-      setPage(pageParam);
       fetchSearch(qParam, statusParam, deptParam);
     } else {
-      setPage(pageParam);
-      if (pageParam === 1) {
-        fetchPage(1);
-      } else {
-        // Need to fetch previous pages to get to the desired page
-        const fetchToPage = async () => {
-          let cursor = null;
-          for (let i = 1; i < pageParam; i++) {
-            let q = query(
-              collection(db, "posts"),
-              orderBy("createdAt", "desc"),
-              limit(PAGE_SIZE)
-            );
-            if (cursor) {
-              q = query(
-                collection(db, "posts"),
-                orderBy("createdAt", "desc"),
-                startAfter(cursor),
-                limit(PAGE_SIZE)
-              );
-            }
-            const snapshot = await getDocs(q);
-            if (snapshot.docs.length > 0) {
-              cursor = snapshot.docs[snapshot.docs.length - 1];
-            } else {
-              break;
-            }
-          }
-          if (cursor) {
-            fetchPage(pageParam, cursor);
-          } else {
-            fetchPage(1);
-            setPage(1);
-          }
-        };
-        fetchToPage();
-      }
+      loadInitial();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -759,110 +787,28 @@ export default function Home({ showIntro = true }) {
         )
       ) : (
         <>
-          {/* Paginated grid */}
+          {/* Infinite scroll grid */}
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-            {(isSearchingActive
-              ? filteredPosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-              : posts
-            ).map((post) => (
+            {(isSearchingActive ? filteredPosts : posts).map((post) => (
               <PostCard key={post.id} post={post} />
             ))}
           </SimpleGrid>
 
-          {/* Truncated Pagination controls */}
-          {(!isSearchingActive && totalDocs > PAGE_SIZE) ||
-          (isSearchingActive &&
-            (filteredPosts.length > PAGE_SIZE || page > 1)) ? (
-            <HStack spacing={2} justifyContent="center" mt={6}>
-              <Button
-                size="sm"
-                onClick={() => {
-                  const newPage = Math.max(1, page - 1);
-                  setPage(newPage);
-                  if (!isSearchingActive) fetchPage(newPage);
-                  const next = new URLSearchParams(urlSearchParams);
-                  next.set("p", String(newPage));
-                  setUrlSearchParams(next, { replace: false });
-                }}
-                isDisabled={page === 1 || isLoading}
-              >
-                Prev
-              </Button>
-
-              {(() => {
-                const totalPages = isSearchingActive
-                  ? Math.ceil(filteredPosts.length / PAGE_SIZE)
-                  : Math.ceil(totalDocs / PAGE_SIZE);
-                const pageNumbers = [];
-
-                // Always show first page
-                if (page > 3) pageNumbers.push(1);
-                if (page > 4) pageNumbers.push("...");
-
-                // Show pages around current page
-                for (
-                  let i = Math.max(1, page - 2);
-                  i <= Math.min(totalPages, page + 2);
-                  i++
-                ) {
-                  pageNumbers.push(i);
-                }
-
-                // Always show last page
-                if (page < totalPages - 3) pageNumbers.push("...");
-                if (page < totalPages - 2) pageNumbers.push(totalPages);
-
-                return pageNumbers.map((pageNum, index) => {
-                  if (pageNum === "...") {
-                    return (
-                      <Text key={`ellipsis-${index}`} color="gray.500">
-                        ...
-                      </Text>
-                    );
-                  }
-                  return (
-                    <Button
-                      key={pageNum}
-                      size="sm"
-                      variant={pageNum === page ? "solid" : "outline"}
-                      colorScheme={pageNum === page ? "blue" : "gray"}
-                      onClick={() => {
-                        setPage(pageNum);
-                        if (!isSearchingActive) fetchPage(pageNum);
-                        const next = new URLSearchParams(urlSearchParams);
-                        next.set("p", String(pageNum));
-                        setUrlSearchParams(next, { replace: false });
-                      }}
-                      isDisabled={isLoading}
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                });
-              })()}
-
-              <Button
-                size="sm"
-                onClick={() => {
-                  const newPage = page + 1;
-                  setPage(newPage);
-                  if (!isSearchingActive) fetchPage(newPage, lastVisible);
-                  const next = new URLSearchParams(urlSearchParams);
-                  next.set("p", String(newPage));
-                  setUrlSearchParams(next, { replace: false });
-                }}
-                isDisabled={
-                  isLoading ||
-                  (!isSearchingActive &&
-                    page === Math.ceil(totalDocs / PAGE_SIZE)) ||
-                  (isSearchingActive &&
-                    page === Math.ceil(filteredPosts.length / PAGE_SIZE))
-                }
-              >
-                Next
-              </Button>
-            </HStack>
-          ) : null}
+          {/* Sentinel for infinite scroll (only when not searching) */}
+          {!isSearchingActive && (
+            <Box ref={loadMoreRef} textAlign="center" py={4} color="gray.600">
+              {isFetchingMore ? (
+                <HStack justify="center">
+                  <Spinner size="sm" />
+                  <Text>Loading more...</Text>
+                </HStack>
+              ) : hasMore ? (
+                <Text>Scroll to load more</Text>
+              ) : (
+                <Text>No more reports</Text>
+              )}
+            </Box>
+          )}
         </>
       )}
     </Container>
