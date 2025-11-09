@@ -154,52 +154,147 @@ export default function Profile() {
 
   return (
     <Container
-      maxW="container.xl"
+      maxW="container.md"
       py={{ base: 6, md: 10 }}
       px={{ base: 4, md: 6 }}
     >
-      <VStack spacing={{ base: 6, md: 8 }} align="stretch">
+      <VStack spacing={{ base: 4, md: 6 }} align="stretch">
         <Heading size={{ base: "md", md: "lg" }}>Profile</Heading>
 
-        {/* Profile Details - Centered with max width */}
-        <Container maxW="container.md" px={0}>
-          <Box
-            p={{ base: 4, md: 8 }}
-            borderRadius="2xl"
-            bg="white"
-            boxShadow="0 10px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)"
-            borderWidth="1px"
-            borderColor="gray.200"
-            bgGradient="linear(to-br, white, gray.50)"
-            position="relative"
-            overflow="hidden"
-            _before={{
-              content: '""',
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: "4px",
-              background: "linear-gradient(90deg, #3B82F6, #8B5CF6, #EC4899)",
-            }}
-            css={{
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-            }}
-          >
-            <VStack spacing={{ base: 3, md: 5 }} align="stretch" mt={2}>
+        <Box
+          p={{ base: 4, md: 8 }}
+          borderRadius="2xl"
+          bg="white"
+          boxShadow="0 10px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)"
+          borderWidth="1px"
+          borderColor="gray.200"
+          bgGradient="linear(to-br, white, gray.50)"
+          position="relative"
+          overflow="hidden"
+          _before={{
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "4px",
+            background: "linear-gradient(90deg, #3B82F6, #8B5CF6, #EC4899)",
+          }}
+          css={{
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+          }}
+        >
+          <VStack spacing={{ base: 3, md: 5 }} align="stretch" mt={2}>
+            <Box
+              p={{ base: 3, md: 4 }}
+              borderRadius="lg"
+              bg="gray.50"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              <HStack
+                justify="space-between"
+                align={{ base: "flex-start", md: "center" }}
+                flexDirection={{ base: "column", md: "row" }}
+                spacing={{ base: 2, md: 0 }}
+              >
+                <Text
+                  fontSize={{ base: "xs", md: "sm" }}
+                  fontWeight="bold"
+                  color="gray.700"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                >
+                  Name
+                </Text>
+                <Text
+                  fontSize={{ base: "md", md: "lg" }}
+                  fontWeight="semibold"
+                  color="gray.900"
+                  wordBreak="break-word"
+                  textAlign={{ base: "left", md: "right" }}
+                >
+                  {profile?.name || user?.displayName || "Not set"}
+                </Text>
+              </HStack>
+            </Box>
+
+            <Box
+              p={{ base: 3, md: 4 }}
+              borderRadius="lg"
+              bg="gray.50"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              <HStack
+                justify="space-between"
+                align={{ base: "flex-start", md: "center" }}
+                flexDirection={{ base: "column", md: "row" }}
+                spacing={{ base: 2, md: 0 }}
+              >
+                <Text
+                  fontSize={{ base: "xs", md: "sm" }}
+                  fontWeight="bold"
+                  color="gray.700"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                >
+                  Email
+                </Text>
+                <Text
+                  fontSize={{ base: "sm", md: "lg" }}
+                  fontWeight="semibold"
+                  color="gray.900"
+                  wordBreak="break-word"
+                  textAlign={{ base: "left", md: "right" }}
+                >
+                  {profile?.email || user?.email || "Not set"}
+                </Text>
+              </HStack>
+            </Box>
+
+            <Box
+              p={{ base: 3, md: 4 }}
+              borderRadius="lg"
+              bg="gray.50"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              <HStack
+                justify="space-between"
+                align={{ base: "flex-start", md: "center" }}
+                flexDirection={{ base: "column", md: "row" }}
+                spacing={{ base: 2, md: 0 }}
+              >
+                <Text
+                  fontSize={{ base: "xs", md: "sm" }}
+                  fontWeight="bold"
+                  color="gray.700"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                >
+                  Password
+                </Text>
+                <Text
+                  fontSize={{ base: "md", md: "lg" }}
+                  fontWeight="semibold"
+                  color="gray.900"
+                  letterSpacing="wider"
+                  fontFamily="mono"
+                >
+                  ••••••••••
+                </Text>
+              </HStack>
+            </Box>
+
+            {isDept && profile?.department && (
               <Box
                 p={{ base: 3, md: 4 }}
                 borderRadius="lg"
-                bgGradient="linear(to-r, blue.50, cyan.50)"
+                bg="gray.50"
                 borderWidth="1px"
-                borderColor="blue.100"
-                transition="all 0.3s ease"
-                _hover={{
-                  borderColor: "blue.300",
-                  boxShadow: "md",
-                  transform: "translateY(-2px)",
-                }}
+                borderColor="gray.100"
               >
                 <HStack
                   justify="space-between"
@@ -214,189 +309,59 @@ export default function Profile() {
                     textTransform="uppercase"
                     letterSpacing="wide"
                   >
-                    Name
-                  </Text>
-                  <Text
-                    fontSize={{ base: "md", md: "lg" }}
-                    fontWeight="semibold"
-                    color="gray.900"
-                    wordBreak="break-word"
-                    textAlign={{ base: "left", md: "right" }}
-                  >
-                    {profile?.name || user?.displayName || "Not set"}
-                  </Text>
-                </HStack>
-              </Box>
-
-              <Box
-                p={{ base: 3, md: 4 }}
-                borderRadius="lg"
-                bgGradient="linear(to-r, purple.50, pink.50)"
-                borderWidth="1px"
-                borderColor="purple.100"
-                transition="all 0.3s ease"
-                _hover={{
-                  borderColor: "purple.300",
-                  boxShadow: "md",
-                  transform: "translateY(-2px)",
-                }}
-              >
-                <HStack
-                  justify="space-between"
-                  align={{ base: "flex-start", md: "center" }}
-                  flexDirection={{ base: "column", md: "row" }}
-                  spacing={{ base: 2, md: 0 }}
-                >
-                  <Text
-                    fontSize={{ base: "xs", md: "sm" }}
-                    fontWeight="bold"
-                    color="gray.700"
-                    textTransform="uppercase"
-                    letterSpacing="wide"
-                  >
-                    Email
-                  </Text>
-                  <Text
-                    fontSize={{ base: "sm", md: "lg" }}
-                    fontWeight="semibold"
-                    color="gray.900"
-                    wordBreak="break-word"
-                    textAlign={{ base: "left", md: "right" }}
-                  >
-                    {profile?.email || user?.email || "Not set"}
-                  </Text>
-                </HStack>
-              </Box>
-
-              <Box
-                p={{ base: 3, md: 4 }}
-                borderRadius="lg"
-                bgGradient="linear(to-r, green.50, teal.50)"
-                borderWidth="1px"
-                borderColor="green.100"
-                transition="all 0.3s ease"
-                _hover={{
-                  borderColor: "green.300",
-                  boxShadow: "md",
-                  transform: "translateY(-2px)",
-                }}
-              >
-                <HStack
-                  justify="space-between"
-                  align={{ base: "flex-start", md: "center" }}
-                  flexDirection={{ base: "column", md: "row" }}
-                  spacing={{ base: 2, md: 0 }}
-                >
-                  <Text
-                    fontSize={{ base: "xs", md: "sm" }}
-                    fontWeight="bold"
-                    color="gray.700"
-                    textTransform="uppercase"
-                    letterSpacing="wide"
-                  >
-                    Password
-                  </Text>
-                  <Text
-                    fontSize={{ base: "md", md: "lg" }}
-                    fontWeight="semibold"
-                    color="gray.900"
-                    letterSpacing="wider"
-                    fontFamily="mono"
-                  >
-                    ••••••••••
-                  </Text>
-                </HStack>
-              </Box>
-
-              {isDept && profile?.department && (
-                <Box
-                  p={{ base: 3, md: 4 }}
-                  borderRadius="lg"
-                  bgGradient="linear(to-r, orange.50, yellow.50)"
-                  borderWidth="1px"
-                  borderColor="orange.100"
-                  transition="all 0.3s ease"
-                  _hover={{
-                    borderColor: "orange.300",
-                    boxShadow: "md",
-                    transform: "translateY(-2px)",
-                  }}
-                >
-                  <HStack
-                    justify="space-between"
-                    align={{ base: "flex-start", md: "center" }}
-                    flexDirection={{ base: "column", md: "row" }}
-                    spacing={{ base: 2, md: 0 }}
-                  >
-                    <Text
-                      fontSize={{ base: "xs", md: "sm" }}
-                      fontWeight="bold"
-                      color="gray.700"
-                      textTransform="uppercase"
-                      letterSpacing="wide"
-                    >
-                      Department
-                    </Text>
-                    <Badge
-                      colorScheme="orange"
-                      fontSize={{ base: "sm", md: "md" }}
-                      px={{ base: 2, md: 3 }}
-                      py={{ base: 1, md: 1.5 }}
-                      borderRadius="md"
-                    >
-                      {profile.department}
-                    </Badge>
-                  </HStack>
-                </Box>
-              )}
-
-              <Box
-                p={{ base: 3, md: 4 }}
-                borderRadius="lg"
-                bgGradient="linear(to-r, indigo.50, purple.50)"
-                borderWidth="1px"
-                borderColor="indigo.100"
-                transition="all 0.3s ease"
-                _hover={{
-                  borderColor: "indigo.300",
-                  boxShadow: "md",
-                  transform: "translateY(-2px)",
-                }}
-              >
-                <HStack
-                  justify="space-between"
-                  align={{ base: "flex-start", md: "center" }}
-                  flexDirection={{ base: "column", md: "row" }}
-                  spacing={{ base: 2, md: 0 }}
-                >
-                  <Text
-                    fontSize={{ base: "xs", md: "sm" }}
-                    fontWeight="bold"
-                    color="gray.700"
-                    textTransform="uppercase"
-                    letterSpacing="wide"
-                  >
-                    Role
+                    Department
                   </Text>
                   <Badge
-                    colorScheme={
-                      isAdmin ? "purple" : isDept ? "orange" : "blue"
-                    }
+                    colorScheme="orange"
                     fontSize={{ base: "sm", md: "md" }}
                     px={{ base: 2, md: 3 }}
                     py={{ base: 1, md: 1.5 }}
-                    textTransform="capitalize"
                     borderRadius="md"
                   >
-                    {roleDisplay}
+                    {profile.department}
                   </Badge>
                 </HStack>
               </Box>
-            </VStack>
-          </Box>
-        </Container>
+            )}
 
-        {/* Your Posts Section - Full Width */}
+            <Box
+              p={{ base: 3, md: 4 }}
+              borderRadius="lg"
+              bg="gray.50"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              <HStack
+                justify="space-between"
+                align={{ base: "flex-start", md: "center" }}
+                flexDirection={{ base: "column", md: "row" }}
+                spacing={{ base: 2, md: 0 }}
+              >
+                <Text
+                  fontSize={{ base: "xs", md: "sm" }}
+                  fontWeight="bold"
+                  color="gray.700"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                >
+                  Role
+                </Text>
+                <Badge
+                  colorScheme={isAdmin ? "purple" : isDept ? "orange" : "blue"}
+                  fontSize={{ base: "sm", md: "md" }}
+                  px={{ base: 2, md: 3 }}
+                  py={{ base: 1, md: 1.5 }}
+                  textTransform="capitalize"
+                  borderRadius="md"
+                >
+                  {roleDisplay}
+                </Badge>
+              </HStack>
+            </Box>
+          </VStack>
+        </Box>
+
+        {/* Your Posts Section */}
         <Box mt={6}>
           <Heading size={{ base: "sm", md: "md" }} mb={4}>
             Your Posts
@@ -423,7 +388,7 @@ export default function Profile() {
           </HStack>
 
           {loadingPosts ? (
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
               {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                 <Box
                   key={`skeleton-${i}`}
@@ -458,7 +423,7 @@ export default function Profile() {
             </Box>
           ) : (
             <>
-              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                 {userPosts.map((post) => (
                   <PostCard key={post.id} post={post} showAsYou={true} />
                 ))}

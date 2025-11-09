@@ -910,8 +910,8 @@ export default function DashboardDept({ fixedDept }) {
                 overflow="hidden"
                 bg="white"
               >
-                <PostCard
-                  post={p}
+                <PostCard 
+                  post={p} 
                   showAsYou={user && p?.createdBy?.uid === user.uid}
                 />
                 {canEditPost(p) && (

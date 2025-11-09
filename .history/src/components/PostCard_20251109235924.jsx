@@ -217,10 +217,8 @@ export default function PostCard({ post, onDelete, showAsYou = false }) {
     }
   };
 
-  // Show anonymous user for non-admins, "you" if showAsYou is true
-  const displayName = showAsYou
-    ? "you"
-    : isAdmin
+  // Show anonymous user for non-admins
+  const displayName = isAdmin
     ? post?.createdBy?.name || post?.createdBy?.email || "Unknown"
     : "anonymous user";
 
