@@ -111,24 +111,33 @@ export default function Dashboard() {
       // By Status
       const statusCounts = {
         pending: 0,
-        in_progress: 0,
+        "in-progress": 0,
         resolved: 0,
         rejected: 0,
       };
-
+      
+      // Debug: Log all unique status values
+      const uniqueStatuses = [...new Set(posts.map(p => p.status))];
+      console.log("Unique status values in posts:", uniqueStatuses);
+      
       posts.forEach((post) => {
         const status = post.status || "pending";
+        console.log("Post status:", status, "Has key:", statusCounts.hasOwnProperty(status));
         if (statusCounts.hasOwnProperty(status)) {
           statusCounts[status]++;
         }
       });
-
+      
+      console.log("Status counts:", statusCounts);
+      
       const byStatus = Object.entries(statusCounts).map(([name, value]) => ({
-        name: name.toUpperCase(),
+        name: name === "in-progress" ? "IN_PROGRESS" : name.replace("_", " ").toUpperCase(),
         value,
         count: value,
-        color: statusColors[name],
+        color: statusColors[name === "in-progress" ? "in_progress" : name],
       }));
+      
+      console.log("byStatus array:", byStatus);
 
       // Reporting Trend - Dynamic based on time range with department breakdown
       const monthCounts = {};
@@ -258,7 +267,7 @@ export default function Dashboard() {
           department: dept,
           resolved: deptPosts.filter((p) => p.status === "resolved").length,
           pending: deptPosts.filter((p) => p.status === "pending").length,
-          in_progress: deptPosts.filter((p) => p.status === "in_progress")
+          in_progress: deptPosts.filter((p) => p.status === "in-progress")
             .length,
         };
       });

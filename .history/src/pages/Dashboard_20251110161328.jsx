@@ -111,23 +111,21 @@ export default function Dashboard() {
       // By Status
       const statusCounts = {
         pending: 0,
-        in_progress: 0,
+        "in-progress": 0,
         resolved: 0,
         rejected: 0,
       };
-
       posts.forEach((post) => {
         const status = post.status || "pending";
         if (statusCounts.hasOwnProperty(status)) {
           statusCounts[status]++;
         }
       });
-
       const byStatus = Object.entries(statusCounts).map(([name, value]) => ({
-        name: name.toUpperCase(),
+        name: name === "in-progress" ? "IN PROGRESS" : name.replace("_", " ").toUpperCase(),
         value,
         count: value,
-        color: statusColors[name],
+        color: statusColors[name === "in-progress" ? "in_progress" : name],
       }));
 
       // Reporting Trend - Dynamic based on time range with department breakdown
@@ -258,7 +256,7 @@ export default function Dashboard() {
           department: dept,
           resolved: deptPosts.filter((p) => p.status === "resolved").length,
           pending: deptPosts.filter((p) => p.status === "pending").length,
-          in_progress: deptPosts.filter((p) => p.status === "in_progress")
+          in_progress: deptPosts.filter((p) => p.status === "in-progress")
             .length,
         };
       });

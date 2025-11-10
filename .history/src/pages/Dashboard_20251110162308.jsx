@@ -115,16 +115,16 @@ export default function Dashboard() {
         resolved: 0,
         rejected: 0,
       };
-
+      
       posts.forEach((post) => {
         const status = post.status || "pending";
         if (statusCounts.hasOwnProperty(status)) {
           statusCounts[status]++;
         }
       });
-
+      
       const byStatus = Object.entries(statusCounts).map(([name, value]) => ({
-        name: name.toUpperCase(),
+        name: name.replace("_", " ").toUpperCase(),
         value,
         count: value,
         color: statusColors[name],
@@ -258,7 +258,7 @@ export default function Dashboard() {
           department: dept,
           resolved: deptPosts.filter((p) => p.status === "resolved").length,
           pending: deptPosts.filter((p) => p.status === "pending").length,
-          in_progress: deptPosts.filter((p) => p.status === "in_progress")
+          in_progress: deptPosts.filter((p) => p.status === "in-progress")
             .length,
         };
       });

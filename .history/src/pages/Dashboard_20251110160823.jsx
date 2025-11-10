@@ -82,12 +82,10 @@ export default function Dashboard() {
       }
 
       const snapshot = await getDocs(q);
-      const posts = snapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .filter((post) => !post.deleted); // Exclude deleted posts
+      const posts = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
       // Calculate statistics
       const total = posts.length;
@@ -114,17 +112,16 @@ export default function Dashboard() {
         in_progress: 0,
         resolved: 0,
         rejected: 0,
+        deleted: 0,
       };
-
       posts.forEach((post) => {
-        const status = post.status || "pending";
+        const status = post.deleted ? "deleted" : post.status || "pending";
         if (statusCounts.hasOwnProperty(status)) {
           statusCounts[status]++;
         }
       });
-
       const byStatus = Object.entries(statusCounts).map(([name, value]) => ({
-        name: name.toUpperCase(),
+        name: name.replace("_", " ").toUpperCase(),
         value,
         count: value,
         color: statusColors[name],

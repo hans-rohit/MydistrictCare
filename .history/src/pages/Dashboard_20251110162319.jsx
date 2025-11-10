@@ -115,16 +115,16 @@ export default function Dashboard() {
         resolved: 0,
         rejected: 0,
       };
-
+      
       posts.forEach((post) => {
         const status = post.status || "pending";
         if (statusCounts.hasOwnProperty(status)) {
           statusCounts[status]++;
         }
       });
-
+      
       const byStatus = Object.entries(statusCounts).map(([name, value]) => ({
-        name: name.toUpperCase(),
+        name: name.replace("_", " ").toUpperCase(),
         value,
         count: value,
         color: statusColors[name],

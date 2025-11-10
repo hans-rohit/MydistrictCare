@@ -82,12 +82,10 @@ export default function Dashboard() {
       }
 
       const snapshot = await getDocs(q);
-      const posts = snapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .filter((post) => !post.deleted); // Exclude deleted posts
+      const posts = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
       // Calculate statistics
       const total = posts.length;
@@ -114,17 +112,16 @@ export default function Dashboard() {
         in_progress: 0,
         resolved: 0,
         rejected: 0,
+        deleted: 0,
       };
-
       posts.forEach((post) => {
-        const status = post.status || "pending";
+        const status = post.deleted ? "deleted" : post.status || "pending";
         if (statusCounts.hasOwnProperty(status)) {
           statusCounts[status]++;
         }
       });
-
       const byStatus = Object.entries(statusCounts).map(([name, value]) => ({
-        name: name.toUpperCase(),
+        name: name.replace("_", " ").toUpperCase(),
         value,
         count: value,
         color: statusColors[name],
@@ -290,11 +287,7 @@ export default function Dashboard() {
   }
 
   return (
-    <Container
-      maxW="container.xl"
-      py={{ base: 4, md: 8 }}
-      px={{ base: 3, md: 6 }}
-    >
+    <Container maxW="container.xl" py={{ base: 4, md: 8 }} px={{ base: 3, md: 6 }}>
       <VStack spacing={{ base: 4, md: 8 }} align="stretch">
         {/* Header */}
         <VStack spacing={3} align="stretch">
@@ -320,10 +313,7 @@ export default function Dashboard() {
         </VStack>
 
         {/* Summary Cards */}
-        <SimpleGrid
-          columns={{ base: 1, sm: 2, lg: 4 }}
-          spacing={{ base: 3, md: 6 }}
-        >
+        <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={{ base: 3, md: 6 }}>
           <Box
             p={{ base: 4, md: 6 }}
             bg={bgColor}
@@ -348,17 +338,10 @@ export default function Dashboard() {
             }}
           >
             <VStack align="start" spacing={2}>
-              <Text
-                fontSize={{ base: "xs", md: "sm" }}
-                textTransform="uppercase"
-                opacity={0.9}
-              >
+              <Text fontSize={{ base: "xs", md: "sm" }} textTransform="uppercase" opacity={0.9}>
                 Total Issues
               </Text>
-              <Text
-                fontSize={{ base: "3xl", md: "4xl" }}
-                fontWeight="extrabold"
-              >
+              <Text fontSize={{ base: "3xl", md: "4xl" }} fontWeight="extrabold">
                 {stats.total}
               </Text>
             </VStack>
@@ -388,17 +371,10 @@ export default function Dashboard() {
             }}
           >
             <VStack align="start" spacing={2}>
-              <Text
-                fontSize={{ base: "xs", md: "sm" }}
-                textTransform="uppercase"
-                opacity={0.9}
-              >
+              <Text fontSize={{ base: "xs", md: "sm" }} textTransform="uppercase" opacity={0.9}>
                 Resolved
               </Text>
-              <Text
-                fontSize={{ base: "3xl", md: "4xl" }}
-                fontWeight="extrabold"
-              >
+              <Text fontSize={{ base: "3xl", md: "4xl" }} fontWeight="extrabold">
                 {stats.byStatus.find((s) => s.name === "RESOLVED")?.value || 0}
               </Text>
             </VStack>
@@ -428,17 +404,10 @@ export default function Dashboard() {
             }}
           >
             <VStack align="start" spacing={2}>
-              <Text
-                fontSize={{ base: "xs", md: "sm" }}
-                textTransform="uppercase"
-                opacity={0.9}
-              >
+              <Text fontSize={{ base: "xs", md: "sm" }} textTransform="uppercase" opacity={0.9}>
                 Pending
               </Text>
-              <Text
-                fontSize={{ base: "3xl", md: "4xl" }}
-                fontWeight="extrabold"
-              >
+              <Text fontSize={{ base: "3xl", md: "4xl" }} fontWeight="extrabold">
                 {stats.byStatus.find((s) => s.name === "PENDING")?.value || 0}
               </Text>
             </VStack>
@@ -468,17 +437,10 @@ export default function Dashboard() {
             }}
           >
             <VStack align="start" spacing={2}>
-              <Text
-                fontSize={{ base: "xs", md: "sm" }}
-                textTransform="uppercase"
-                opacity={0.9}
-              >
+              <Text fontSize={{ base: "xs", md: "sm" }} textTransform="uppercase" opacity={0.9}>
                 In Progress
               </Text>
-              <Text
-                fontSize={{ base: "3xl", md: "4xl" }}
-                fontWeight="extrabold"
-              >
+              <Text fontSize={{ base: "3xl", md: "4xl" }} fontWeight="extrabold">
                 {stats.byStatus.find((s) => s.name === "IN_PROGRESS")?.value ||
                   0}
               </Text>
@@ -487,66 +449,58 @@ export default function Dashboard() {
         </SimpleGrid>
 
         {/* Charts Row 1 */}
-        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={{ base: 4, md: 6 }}>
+        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
           {/* Department Distribution - Pie Chart */}
           <Box
-            p={{ base: 4, md: 6 }}
+            p={6}
             bg={bgColor}
             borderRadius="xl"
             borderWidth="1px"
             borderColor={borderColor}
             shadow="md"
           >
-            <Heading size={{ base: "sm", md: "md" }} mb={4} color="gray.700">
+            <Heading size="md" mb={4} color="gray.700">
               Issues by Department
             </Heading>
-            <Box height={{ base: "250px", md: "300px" }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stats.byDepartment.filter((dept) => dept.value > 0)}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={true}
-                    label={({ name, percent }) =>
-                      percent > 0
-                        ? `${name}: ${(percent * 100).toFixed(0)}%`
-                        : ""
-                    }
-                    outerRadius={{ base: 60, md: 80 }}
-                    fill="#8884d8"
-                    dataKey="value"
-                    minAngle={15}
-                  >
-                    {stats.byDepartment
-                      .filter((dept) => dept.value > 0)
-                      .map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={departmentColors[entry.name]}
-                        />
-                      ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "12px" }} iconSize={10} />
-                </PieChart>
-              </ResponsiveContainer>
-            </Box>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={stats.byDepartment}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) =>
+                    `${name}: ${(percent * 100).toFixed(0)}%`
+                  }
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {stats.byDepartment.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={departmentColors[entry.name]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </Box>
 
           {/* Average Resolution Time - Custom Cards */}
           <Box
-            p={{ base: 4, md: 6 }}
+            p={6}
             bg={bgColor}
             borderRadius="xl"
             borderWidth="1px"
             borderColor={borderColor}
             shadow="md"
           >
-            <Heading size={{ base: "sm", md: "md" }} mb={4} color="gray.700">
+            <Heading size="md" mb={4} color="gray.700">
               Average Resolution Time
             </Heading>
-            <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
               {stats.responseTime?.map((dept) => (
                 <Box
                   key={dept.department}
@@ -643,122 +597,106 @@ export default function Dashboard() {
         </SimpleGrid>
 
         {/* Charts Row 2 */}
-        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={{ base: 4, md: 6 }}>
+        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
           {/* Department Reporting Trend - Line Chart */}
           <Box
-            p={{ base: 4, md: 6 }}
+            p={6}
             bg={bgColor}
             borderRadius="xl"
             borderWidth="1px"
             borderColor={borderColor}
             shadow="md"
           >
-            <Heading size={{ base: "sm", md: "md" }} mb={4} color="gray.700">
+            <Heading size="md" mb={4} color="gray.700">
               {timeRange === "7days"
                 ? "Daily Reporting Trend"
                 : timeRange === "30days"
                 ? "Weekly Reporting Trend"
                 : "Monthly Reporting Trend"}
             </Heading>
-            <Box height={{ base: "250px", md: "300px" }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats.byMonth}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="period"
-                    tick={{ fontSize: 12 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "11px" }} iconSize={10} />
-                  <Line
-                    type="monotone"
-                    dataKey="Electricity"
-                    stroke={departmentColors.Electricity}
-                    strokeWidth={2}
-                    name="Electricity"
-                    dot={{ fill: departmentColors.Electricity }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="Water"
-                    stroke={departmentColors.Water}
-                    strokeWidth={2}
-                    name="Water"
-                    dot={{ fill: departmentColors.Water }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="Sewage"
-                    stroke={departmentColors.Sewage}
-                    strokeWidth={2}
-                    name="Sewage"
-                    dot={{ fill: departmentColors.Sewage }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="Road"
-                    stroke={departmentColors.Road}
-                    strokeWidth={2}
-                    name="Road"
-                    dot={{ fill: departmentColors.Road }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </Box>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={stats.byMonth}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="period" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="Electricity"
+                  stroke={departmentColors.Electricity}
+                  strokeWidth={2}
+                  name="Electricity"
+                  dot={{ fill: departmentColors.Electricity }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="Water"
+                  stroke={departmentColors.Water}
+                  strokeWidth={2}
+                  name="Water"
+                  dot={{ fill: departmentColors.Water }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="Sewage"
+                  stroke={departmentColors.Sewage}
+                  strokeWidth={2}
+                  name="Sewage"
+                  dot={{ fill: departmentColors.Sewage }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="Road"
+                  stroke={departmentColors.Road}
+                  strokeWidth={2}
+                  name="Road"
+                  dot={{ fill: departmentColors.Road }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </Box>
 
           {/* Department Performance - Stacked Bar Chart */}
           <Box
-            p={{ base: 4, md: 6 }}
+            p={6}
             bg={bgColor}
             borderRadius="xl"
             borderWidth="1px"
             borderColor={borderColor}
             shadow="md"
           >
-            <Heading size={{ base: "sm", md: "md" }} mb={4} color="gray.700">
+            <Heading size="md" mb={4} color="gray.700">
               Department Performance
             </Heading>
-            <Box height={{ base: "250px", md: "300px" }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.recentActivity}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="department"
-                    tick={{ fontSize: 11 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "11px" }} iconSize={10} />
-                  <Bar dataKey="resolved" stackId="a" fill="#30cfd0" />
-                  <Bar dataKey="in_progress" stackId="a" fill="#fa709a" />
-                  <Bar dataKey="pending" stackId="a" fill="#f093fb" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Box>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={stats.recentActivity}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="department" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="resolved" stackId="a" fill="#30cfd0" />
+                <Bar dataKey="in_progress" stackId="a" fill="#fa709a" />
+                <Bar dataKey="pending" stackId="a" fill="#f093fb" />
+              </BarChart>
+            </ResponsiveContainer>
           </Box>
         </SimpleGrid>
 
         {/* Department Breakdown Table */}
         <Box
-          p={{ base: 4, md: 6 }}
+          p={6}
           bg={bgColor}
           borderRadius="xl"
           borderWidth="1px"
           borderColor={borderColor}
           shadow="md"
         >
-          <Heading size={{ base: "sm", md: "md" }} mb={4} color="gray.700">
+          <Heading size="md" mb={4} color="gray.700">
             Department Summary
           </Heading>
-          <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={4}>
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
             {stats.byDepartment.map((dept) => (
               <Box
                 key={dept.name}

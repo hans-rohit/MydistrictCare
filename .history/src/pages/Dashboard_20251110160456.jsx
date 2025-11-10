@@ -82,12 +82,10 @@ export default function Dashboard() {
       }
 
       const snapshot = await getDocs(q);
-      const posts = snapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .filter((post) => !post.deleted); // Exclude deleted posts
+      const posts = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
       // Calculate statistics
       const total = posts.length;
@@ -114,17 +112,16 @@ export default function Dashboard() {
         in_progress: 0,
         resolved: 0,
         rejected: 0,
+        deleted: 0,
       };
-
       posts.forEach((post) => {
-        const status = post.status || "pending";
+        const status = post.deleted ? "deleted" : post.status || "pending";
         if (statusCounts.hasOwnProperty(status)) {
           statusCounts[status]++;
         }
       });
-
       const byStatus = Object.entries(statusCounts).map(([name, value]) => ({
-        name: name.toUpperCase(),
+        name: name.replace("_", " ").toUpperCase(),
         value,
         count: value,
         color: statusColors[name],
@@ -290,11 +287,7 @@ export default function Dashboard() {
   }
 
   return (
-    <Container
-      maxW="container.xl"
-      py={{ base: 4, md: 8 }}
-      px={{ base: 3, md: 6 }}
-    >
+    <Container maxW="container.xl" py={{ base: 4, md: 8 }} px={{ base: 3, md: 6 }}>
       <VStack spacing={{ base: 4, md: 8 }} align="stretch">
         {/* Header */}
         <VStack spacing={3} align="stretch">
@@ -320,10 +313,7 @@ export default function Dashboard() {
         </VStack>
 
         {/* Summary Cards */}
-        <SimpleGrid
-          columns={{ base: 1, sm: 2, lg: 4 }}
-          spacing={{ base: 3, md: 6 }}
-        >
+        <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={{ base: 3, md: 6 }}>
           <Box
             p={{ base: 4, md: 6 }}
             bg={bgColor}
@@ -348,17 +338,10 @@ export default function Dashboard() {
             }}
           >
             <VStack align="start" spacing={2}>
-              <Text
-                fontSize={{ base: "xs", md: "sm" }}
-                textTransform="uppercase"
-                opacity={0.9}
-              >
+              <Text fontSize={{ base: "xs", md: "sm" }} textTransform="uppercase" opacity={0.9}>
                 Total Issues
               </Text>
-              <Text
-                fontSize={{ base: "3xl", md: "4xl" }}
-                fontWeight="extrabold"
-              >
+              <Text fontSize={{ base: "3xl", md: "4xl" }} fontWeight="extrabold">
                 {stats.total}
               </Text>
             </VStack>
@@ -388,17 +371,10 @@ export default function Dashboard() {
             }}
           >
             <VStack align="start" spacing={2}>
-              <Text
-                fontSize={{ base: "xs", md: "sm" }}
-                textTransform="uppercase"
-                opacity={0.9}
-              >
+              <Text fontSize={{ base: "xs", md: "sm" }} textTransform="uppercase" opacity={0.9}>
                 Resolved
               </Text>
-              <Text
-                fontSize={{ base: "3xl", md: "4xl" }}
-                fontWeight="extrabold"
-              >
+              <Text fontSize={{ base: "3xl", md: "4xl" }} fontWeight="extrabold">
                 {stats.byStatus.find((s) => s.name === "RESOLVED")?.value || 0}
               </Text>
             </VStack>
@@ -428,17 +404,10 @@ export default function Dashboard() {
             }}
           >
             <VStack align="start" spacing={2}>
-              <Text
-                fontSize={{ base: "xs", md: "sm" }}
-                textTransform="uppercase"
-                opacity={0.9}
-              >
+              <Text fontSize={{ base: "xs", md: "sm" }} textTransform="uppercase" opacity={0.9}>
                 Pending
               </Text>
-              <Text
-                fontSize={{ base: "3xl", md: "4xl" }}
-                fontWeight="extrabold"
-              >
+              <Text fontSize={{ base: "3xl", md: "4xl" }} fontWeight="extrabold">
                 {stats.byStatus.find((s) => s.name === "PENDING")?.value || 0}
               </Text>
             </VStack>
@@ -468,17 +437,10 @@ export default function Dashboard() {
             }}
           >
             <VStack align="start" spacing={2}>
-              <Text
-                fontSize={{ base: "xs", md: "sm" }}
-                textTransform="uppercase"
-                opacity={0.9}
-              >
+              <Text fontSize={{ base: "xs", md: "sm" }} textTransform="uppercase" opacity={0.9}>
                 In Progress
               </Text>
-              <Text
-                fontSize={{ base: "3xl", md: "4xl" }}
-                fontWeight="extrabold"
-              >
+              <Text fontSize={{ base: "3xl", md: "4xl" }} fontWeight="extrabold">
                 {stats.byStatus.find((s) => s.name === "IN_PROGRESS")?.value ||
                   0}
               </Text>
@@ -509,9 +471,7 @@ export default function Dashboard() {
                     cy="50%"
                     labelLine={true}
                     label={({ name, percent }) =>
-                      percent > 0
-                        ? `${name}: ${(percent * 100).toFixed(0)}%`
-                        : ""
+                      percent > 0 ? `${name}: ${(percent * 100).toFixed(0)}%` : ""
                     }
                     outerRadius={{ base: 60, md: 80 }}
                     fill="#8884d8"
@@ -528,7 +488,10 @@ export default function Dashboard() {
                       ))}
                   </Pie>
                   <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "12px" }} iconSize={10} />
+                  <Legend 
+                    wrapperStyle={{ fontSize: "12px" }}
+                    iconSize={10}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </Box>
@@ -664,8 +627,8 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={stats.byMonth}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="period"
+                  <XAxis 
+                    dataKey="period" 
                     tick={{ fontSize: 12 }}
                     angle={-45}
                     textAnchor="end"
@@ -673,7 +636,10 @@ export default function Dashboard() {
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "11px" }} iconSize={10} />
+                  <Legend 
+                    wrapperStyle={{ fontSize: "11px" }}
+                    iconSize={10}
+                  />
                   <Line
                     type="monotone"
                     dataKey="Electricity"
@@ -727,8 +693,8 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.recentActivity}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="department"
+                  <XAxis 
+                    dataKey="department" 
                     tick={{ fontSize: 11 }}
                     angle={-45}
                     textAnchor="end"
@@ -736,7 +702,10 @@ export default function Dashboard() {
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "11px" }} iconSize={10} />
+                  <Legend 
+                    wrapperStyle={{ fontSize: "11px" }}
+                    iconSize={10}
+                  />
                   <Bar dataKey="resolved" stackId="a" fill="#30cfd0" />
                   <Bar dataKey="in_progress" stackId="a" fill="#fa709a" />
                   <Bar dataKey="pending" stackId="a" fill="#f093fb" />
