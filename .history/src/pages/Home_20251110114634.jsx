@@ -764,33 +764,16 @@ export default function Home({ showIntro = true }) {
 
       {/* Stats Dashboard */}
       <Box
-        display={{ base: "flex", md: "grid" }}
+        display="grid"
         gridTemplateColumns={{
+          base: "repeat(auto-fit, minmax(120px, 1fr))",
           md: `repeat(${isSuperAdmin ? 6 : 5}, 1fr)`,
         }}
-        overflowX={{ base: "auto", md: "visible" }}
         gap={3}
         mb={5}
         w="100%"
-        css={{
-          "&::-webkit-scrollbar": {
-            height: "8px",
-          },
-          "&::-webkit-scrollbar-track": {
-            background: "transparent",
-          },
-          "&::-webkit-scrollbar-thumb": {
-            background: "rgba(0,0,0,0.2)",
-            borderRadius: "10px",
-          },
-          "&::-webkit-scrollbar-thumb:hover": {
-            background: "rgba(0,0,0,0.3)",
-          },
-        }}
       >
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
           p={5}
           borderRadius="xl"
           bgGradient="linear(135deg, #667eea 0%, #764ba2 100%)"
@@ -816,28 +799,15 @@ export default function Home({ showIntro = true }) {
             pointerEvents: "none",
           }}
         >
-          <Text
-            fontSize="xs"
-            fontWeight="bold"
-            mb={2}
-            textTransform="uppercase"
-            letterSpacing="wide"
-            opacity={0.9}
-          >
+          <Text fontSize="xs" fontWeight="bold" mb={2} textTransform="uppercase" letterSpacing="wide" opacity={0.9}>
             Total
           </Text>
-          <Text
-            fontSize="3xl"
-            fontWeight="extrabold"
-            textShadow="0 2px 10px rgba(0,0,0,0.2)"
-          >
+          <Text fontSize="3xl" fontWeight="extrabold" textShadow="0 2px 10px rgba(0,0,0,0.2)">
             {counts.total}
           </Text>
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
           p={5}
           borderRadius="xl"
           bgGradient="linear(135deg, #f093fb 0%, #f5576c 100%)"
@@ -863,28 +833,15 @@ export default function Home({ showIntro = true }) {
             pointerEvents: "none",
           }}
         >
-          <Text
-            fontSize="xs"
-            fontWeight="bold"
-            mb={2}
-            textTransform="uppercase"
-            letterSpacing="wide"
-            opacity={0.9}
-          >
+          <Text fontSize="xs" fontWeight="bold" mb={2} textTransform="uppercase" letterSpacing="wide" opacity={0.9}>
             Pending
           </Text>
-          <Text
-            fontSize="3xl"
-            fontWeight="extrabold"
-            textShadow="0 2px 10px rgba(0,0,0,0.2)"
-          >
+          <Text fontSize="3xl" fontWeight="extrabold" textShadow="0 2px 10px rgba(0,0,0,0.2)">
             {counts.pending}
           </Text>
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
           p={5}
           borderRadius="xl"
           bgGradient="linear(135deg, #fa709a 0%, #fee140 100%)"
@@ -910,28 +867,15 @@ export default function Home({ showIntro = true }) {
             pointerEvents: "none",
           }}
         >
-          <Text
-            fontSize="xs"
-            fontWeight="bold"
-            mb={2}
-            textTransform="uppercase"
-            letterSpacing="wide"
-            opacity={0.9}
-          >
+          <Text fontSize="xs" fontWeight="bold" mb={2} textTransform="uppercase" letterSpacing="wide" opacity={0.9}>
             In Progress
           </Text>
-          <Text
-            fontSize="3xl"
-            fontWeight="extrabold"
-            textShadow="0 2px 10px rgba(0,0,0,0.2)"
-          >
+          <Text fontSize="3xl" fontWeight="extrabold" textShadow="0 2px 10px rgba(0,0,0,0.2)">
             {counts.in_progress}
           </Text>
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
           p={5}
           borderRadius="xl"
           bgGradient="linear(135deg, #30cfd0 0%, #330867 100%)"
@@ -957,28 +901,15 @@ export default function Home({ showIntro = true }) {
             pointerEvents: "none",
           }}
         >
-          <Text
-            fontSize="xs"
-            fontWeight="bold"
-            mb={2}
-            textTransform="uppercase"
-            letterSpacing="wide"
-            opacity={0.9}
-          >
+          <Text fontSize="xs" fontWeight="bold" mb={2} textTransform="uppercase" letterSpacing="wide" opacity={0.9}>
             Resolved
           </Text>
-          <Text
-            fontSize="3xl"
-            fontWeight="extrabold"
-            textShadow="0 2px 10px rgba(0,0,0,0.2)"
-          >
+          <Text fontSize="3xl" fontWeight="extrabold" textShadow="0 2px 10px rgba(0,0,0,0.2)">
             {counts.resolved}
           </Text>
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
           p={5}
           borderRadius="xl"
           bgGradient="linear(135deg, #ff0844 0%, #ffb199 100%)"
@@ -1004,29 +935,16 @@ export default function Home({ showIntro = true }) {
             pointerEvents: "none",
           }}
         >
-          <Text
-            fontSize="xs"
-            fontWeight="bold"
-            mb={2}
-            textTransform="uppercase"
-            letterSpacing="wide"
-            opacity={0.9}
-          >
+          <Text fontSize="xs" fontWeight="bold" mb={2} textTransform="uppercase" letterSpacing="wide" opacity={0.9}>
             Rejected
           </Text>
-          <Text
-            fontSize="3xl"
-            fontWeight="extrabold"
-            textShadow="0 2px 10px rgba(0,0,0,0.2)"
-          >
+          <Text fontSize="3xl" fontWeight="extrabold" textShadow="0 2px 10px rgba(0,0,0,0.2)">
             {counts.rejected}
           </Text>
         </Box>
 
         {isSuperAdmin && (
           <Box
-            minW={{ base: "140px", md: "auto" }}
-            flex={{ base: "0 0 auto", md: "1" }}
             p={5}
             borderRadius="xl"
             bgGradient="linear(135deg, #868f96 0%, #596164 100%)"
@@ -1052,21 +970,10 @@ export default function Home({ showIntro = true }) {
               pointerEvents: "none",
             }}
           >
-            <Text
-              fontSize="xs"
-              fontWeight="bold"
-              mb={2}
-              textTransform="uppercase"
-              letterSpacing="wide"
-              opacity={0.9}
-            >
+            <Text fontSize="xs" fontWeight="bold" mb={2} textTransform="uppercase" letterSpacing="wide" opacity={0.9}>
               Deleted
             </Text>
-            <Text
-              fontSize="3xl"
-              fontWeight="extrabold"
-              textShadow="0 2px 10px rgba(0,0,0,0.2)"
-            >
+            <Text fontSize="3xl" fontWeight="extrabold" textShadow="0 2px 10px rgba(0,0,0,0.2)">
               {counts.deleted}
             </Text>
           </Box>

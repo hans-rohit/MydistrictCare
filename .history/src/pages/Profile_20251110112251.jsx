@@ -160,10 +160,11 @@ export default function Profile() {
       px={{ base: 4, md: 6 }}
     >
       <VStack spacing={{ base: 6, md: 8 }} align="stretch">
-        <Heading
-          size={{ base: "md", md: "lg" }}
+        <Heading 
+          size={{ base: "md", md: "lg" }} 
           pl={{ base: 4, md: 6 }}
-          color="#2B6CB0"
+          bgGradient="linear(to-r, #3B82F6, #8B5CF6, #EC4899)"
+          bgClip="text"
           fontWeight="extrabold"
         >
           Profile
@@ -411,7 +412,8 @@ export default function Profile() {
               size={{ base: "md", md: "lg" }}
               mb={4}
               pl={{ base: 4, md: 6 }}
-              color="#2B6CB0"
+              bgGradient="linear(to-r, purple.500, purple.600, pink.500)"
+              bgClip="text"
               fontWeight="extrabold"
             >
               Your Posts

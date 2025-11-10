@@ -160,8 +160,8 @@ export default function Profile() {
       px={{ base: 4, md: 6 }}
     >
       <VStack spacing={{ base: 6, md: 8 }} align="stretch">
-        <Heading
-          size={{ base: "md", md: "lg" }}
+        <Heading 
+          size={{ base: "md", md: "lg" }} 
           pl={{ base: 4, md: 6 }}
           color="#2B6CB0"
           fontWeight="extrabold"

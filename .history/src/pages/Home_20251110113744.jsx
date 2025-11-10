@@ -763,315 +763,127 @@ export default function Home({ showIntro = true }) {
       </HStack>
 
       {/* Stats Dashboard */}
-      <Box
-        display={{ base: "flex", md: "grid" }}
-        gridTemplateColumns={{
-          md: `repeat(${isSuperAdmin ? 6 : 5}, 1fr)`,
-        }}
-        overflowX={{ base: "auto", md: "visible" }}
-        gap={3}
-        mb={5}
-        w="100%"
+      <HStack 
+        spacing={3} 
+        mb={5} 
+        overflowX="auto"
         css={{
-          "&::-webkit-scrollbar": {
-            height: "8px",
+          '&::-webkit-scrollbar': {
+            height: '6px',
           },
-          "&::-webkit-scrollbar-track": {
-            background: "transparent",
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
           },
-          "&::-webkit-scrollbar-thumb": {
-            background: "rgba(0,0,0,0.2)",
-            borderRadius: "10px",
-          },
-          "&::-webkit-scrollbar-thumb:hover": {
-            background: "rgba(0,0,0,0.3)",
+          '&::-webkit-scrollbar-thumb': {
+            background: '#888',
+            borderRadius: '3px',
           },
         }}
       >
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
-          borderRadius="xl"
-          bgGradient="linear(135deg, #667eea 0%, #764ba2 100%)"
+          minW="120px"
+          p={4}
+          borderRadius="lg"
+          bg="blue.500"
           color="white"
           textAlign="center"
-          boxShadow="xl"
-          position="relative"
-          overflow="hidden"
-          transition="all 0.3s ease"
-          _hover={{
-            transform: "translateY(-4px)",
-            boxShadow: "2xl",
-          }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            top: "-50%",
-            right: "-50%",
-            width: "200%",
-            height: "200%",
-            background:
-              "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }}
+          boxShadow="md"
         >
-          <Text
-            fontSize="xs"
-            fontWeight="bold"
-            mb={2}
-            textTransform="uppercase"
-            letterSpacing="wide"
-            opacity={0.9}
-          >
+          <Text fontSize="sm" fontWeight="bold" mb={1}>
             Total
           </Text>
-          <Text
-            fontSize="3xl"
-            fontWeight="extrabold"
-            textShadow="0 2px 10px rgba(0,0,0,0.2)"
-          >
+          <Text fontSize="2xl" fontWeight="bold">
             {counts.total}
           </Text>
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
-          borderRadius="xl"
-          bgGradient="linear(135deg, #f093fb 0%, #f5576c 100%)"
+          minW="120px"
+          p={4}
+          borderRadius="lg"
+          bgGradient="linear(to-br, yellow.400, orange.400)"
           color="white"
           textAlign="center"
-          boxShadow="xl"
-          position="relative"
-          overflow="hidden"
-          transition="all 0.3s ease"
-          _hover={{
-            transform: "translateY(-4px)",
-            boxShadow: "2xl",
-          }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            top: "-50%",
-            right: "-50%",
-            width: "200%",
-            height: "200%",
-            background:
-              "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }}
+          boxShadow="md"
         >
-          <Text
-            fontSize="xs"
-            fontWeight="bold"
-            mb={2}
-            textTransform="uppercase"
-            letterSpacing="wide"
-            opacity={0.9}
-          >
+          <Text fontSize="sm" fontWeight="bold" mb={1}>
             Pending
           </Text>
-          <Text
-            fontSize="3xl"
-            fontWeight="extrabold"
-            textShadow="0 2px 10px rgba(0,0,0,0.2)"
-          >
+          <Text fontSize="2xl" fontWeight="bold">
             {counts.pending}
           </Text>
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
-          borderRadius="xl"
-          bgGradient="linear(135deg, #fa709a 0%, #fee140 100%)"
+          minW="120px"
+          p={4}
+          borderRadius="lg"
+          bgGradient="linear(to-br, orange.400, orange.600)"
           color="white"
           textAlign="center"
-          boxShadow="xl"
-          position="relative"
-          overflow="hidden"
-          transition="all 0.3s ease"
-          _hover={{
-            transform: "translateY(-4px)",
-            boxShadow: "2xl",
-          }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            top: "-50%",
-            right: "-50%",
-            width: "200%",
-            height: "200%",
-            background:
-              "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }}
+          boxShadow="md"
         >
-          <Text
-            fontSize="xs"
-            fontWeight="bold"
-            mb={2}
-            textTransform="uppercase"
-            letterSpacing="wide"
-            opacity={0.9}
-          >
+          <Text fontSize="sm" fontWeight="bold" mb={1}>
             In Progress
           </Text>
-          <Text
-            fontSize="3xl"
-            fontWeight="extrabold"
-            textShadow="0 2px 10px rgba(0,0,0,0.2)"
-          >
+          <Text fontSize="2xl" fontWeight="bold">
             {counts.in_progress}
           </Text>
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
-          borderRadius="xl"
-          bgGradient="linear(135deg, #30cfd0 0%, #330867 100%)"
+          minW="120px"
+          p={4}
+          borderRadius="lg"
+          bgGradient="linear(to-br, green.400, green.600)"
           color="white"
           textAlign="center"
-          boxShadow="xl"
-          position="relative"
-          overflow="hidden"
-          transition="all 0.3s ease"
-          _hover={{
-            transform: "translateY(-4px)",
-            boxShadow: "2xl",
-          }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            top: "-50%",
-            right: "-50%",
-            width: "200%",
-            height: "200%",
-            background:
-              "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }}
+          boxShadow="md"
         >
-          <Text
-            fontSize="xs"
-            fontWeight="bold"
-            mb={2}
-            textTransform="uppercase"
-            letterSpacing="wide"
-            opacity={0.9}
-          >
+          <Text fontSize="sm" fontWeight="bold" mb={1}>
             Resolved
           </Text>
-          <Text
-            fontSize="3xl"
-            fontWeight="extrabold"
-            textShadow="0 2px 10px rgba(0,0,0,0.2)"
-          >
+          <Text fontSize="2xl" fontWeight="bold">
             {counts.resolved}
           </Text>
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
-          borderRadius="xl"
-          bgGradient="linear(135deg, #ff0844 0%, #ffb199 100%)"
+          minW="120px"
+          p={4}
+          borderRadius="lg"
+          bgGradient="linear(to-br, red.400, red.600)"
           color="white"
           textAlign="center"
-          boxShadow="xl"
-          position="relative"
-          overflow="hidden"
-          transition="all 0.3s ease"
-          _hover={{
-            transform: "translateY(-4px)",
-            boxShadow: "2xl",
-          }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            top: "-50%",
-            right: "-50%",
-            width: "200%",
-            height: "200%",
-            background:
-              "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }}
+          boxShadow="md"
         >
-          <Text
-            fontSize="xs"
-            fontWeight="bold"
-            mb={2}
-            textTransform="uppercase"
-            letterSpacing="wide"
-            opacity={0.9}
-          >
+          <Text fontSize="sm" fontWeight="bold" mb={1}>
             Rejected
           </Text>
-          <Text
-            fontSize="3xl"
-            fontWeight="extrabold"
-            textShadow="0 2px 10px rgba(0,0,0,0.2)"
-          >
+          <Text fontSize="2xl" fontWeight="bold">
             {counts.rejected}
           </Text>
         </Box>
 
         {isSuperAdmin && (
           <Box
-            minW={{ base: "140px", md: "auto" }}
-            flex={{ base: "0 0 auto", md: "1" }}
-            p={5}
-            borderRadius="xl"
-            bgGradient="linear(135deg, #868f96 0%, #596164 100%)"
+            minW="120px"
+            p={4}
+            borderRadius="lg"
+            bgGradient="linear(to-br, gray.500, gray.700)"
             color="white"
             textAlign="center"
-            boxShadow="xl"
-            position="relative"
-            overflow="hidden"
-            transition="all 0.3s ease"
-            _hover={{
-              transform: "translateY(-4px)",
-              boxShadow: "2xl",
-            }}
-            _before={{
-              content: '""',
-              position: "absolute",
-              top: "-50%",
-              right: "-50%",
-              width: "200%",
-              height: "200%",
-              background:
-                "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
-              pointerEvents: "none",
-            }}
+            boxShadow="md"
           >
-            <Text
-              fontSize="xs"
-              fontWeight="bold"
-              mb={2}
-              textTransform="uppercase"
-              letterSpacing="wide"
-              opacity={0.9}
-            >
+            <Text fontSize="sm" fontWeight="bold" mb={1}>
               Deleted
             </Text>
-            <Text
-              fontSize="3xl"
-              fontWeight="extrabold"
-              textShadow="0 2px 10px rgba(0,0,0,0.2)"
-            >
+            <Text fontSize="2xl" fontWeight="bold">
               {counts.deleted}
             </Text>
           </Box>
         )}
-      </Box>
+      </HStack>
 
       {/* Search controls for Home feed */}
       <VStack align="stretch" spacing={2} mb={4}>

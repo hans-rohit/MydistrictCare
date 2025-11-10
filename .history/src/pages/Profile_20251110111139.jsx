@@ -160,12 +160,7 @@ export default function Profile() {
       px={{ base: 4, md: 6 }}
     >
       <VStack spacing={{ base: 6, md: 8 }} align="stretch">
-        <Heading
-          size={{ base: "md", md: "lg" }}
-          pl={{ base: 4, md: 6 }}
-          color="#2B6CB0"
-          fontWeight="extrabold"
-        >
+        <Heading size={{ base: "md", md: "lg" }} pl={{ base: 4, md: 6 }}>
           Profile
         </Heading>
 
@@ -407,101 +402,95 @@ export default function Profile() {
         {/* Your Posts Section - Only for Public Users */}
         {isPublicUser && (
           <Box mt={6}>
-            <Heading
-              size={{ base: "md", md: "lg" }}
-              mb={4}
-              pl={{ base: 4, md: 6 }}
-              color="#2B6CB0"
-              fontWeight="extrabold"
-            >
+            <Heading size={{ base: "md", md: "lg" }} mb={4} pl={{ base: 4, md: 6 }}>
               Your Posts
             </Heading>
 
-            {/* Tab Buttons */}
-            <HStack justify="center" spacing={4} mb={6}>
-              <Button
-                colorScheme={activeTab === "live" ? "blue" : "gray"}
-                variant={activeTab === "live" ? "solid" : "outline"}
-                onClick={() => setActiveTab("live")}
-                size={{ base: "sm", md: "md" }}
-              >
-                Live
-              </Button>
-              <Button
-                colorScheme={activeTab === "deleted" ? "red" : "gray"}
-                variant={activeTab === "deleted" ? "solid" : "outline"}
-                onClick={() => setActiveTab("deleted")}
-                size={{ base: "sm", md: "md" }}
-              >
-                Deleted
-              </Button>
-            </HStack>
+          {/* Tab Buttons */}
+          <HStack justify="center" spacing={4} mb={6}>
+            <Button
+              colorScheme={activeTab === "live" ? "blue" : "gray"}
+              variant={activeTab === "live" ? "solid" : "outline"}
+              onClick={() => setActiveTab("live")}
+              size={{ base: "sm", md: "md" }}
+            >
+              Live
+            </Button>
+            <Button
+              colorScheme={activeTab === "deleted" ? "red" : "gray"}
+              variant={activeTab === "deleted" ? "solid" : "outline"}
+              onClick={() => setActiveTab("deleted")}
+              size={{ base: "sm", md: "md" }}
+            >
+              Deleted
+            </Button>
+          </HStack>
 
-            {loadingPosts ? (
+          {loadingPosts ? (
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+              {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                <Box
+                  key={`skeleton-${i}`}
+                  borderWidth="1px"
+                  borderRadius="md"
+                  overflow="hidden"
+                  bg="white"
+                  p={4}
+                >
+                  <Skeleton height="180px" mb={3} borderRadius="md" />
+                  <SkeletonText mt="4" noOfLines={3} spacing="4" />
+                </Box>
+              ))}
+            </SimpleGrid>
+          ) : userPosts.length === 0 ? (
+            <Box
+              p={{ base: 6, md: 8 }}
+              borderRadius="lg"
+              bg="white"
+              borderWidth="1px"
+              borderColor="gray.200"
+              textAlign="center"
+            >
+              <Text fontSize={{ base: "md", md: "lg" }} color="gray.600">
+                No posts yet
+              </Text>
+              <Text fontSize="sm" color="gray.500" mt={2}>
+                {activeTab === "live"
+                  ? "You haven't reported any issues yet."
+                  : "You don't have any deleted posts."}
+              </Text>
+            </Box>
+          ) : (
+            <>
               <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-                {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                  <Box
-                    key={`skeleton-${i}`}
-                    borderWidth="1px"
-                    borderRadius="md"
-                    overflow="hidden"
-                    bg="white"
-                    p={4}
-                  >
-                    <Skeleton height="180px" mb={3} borderRadius="md" />
-                    <SkeletonText mt="4" noOfLines={3} spacing="4" />
-                  </Box>
+                {userPosts.map((post) => (
+                  <PostCard key={post.id} post={post} showAsYou={true} />
                 ))}
               </SimpleGrid>
-            ) : userPosts.length === 0 ? (
-              <Box
-                p={{ base: 6, md: 8 }}
-                borderRadius="lg"
-                bg="white"
-                borderWidth="1px"
-                borderColor="gray.200"
-                textAlign="center"
-              >
-                <Text fontSize={{ base: "md", md: "lg" }} color="gray.600">
-                  No posts yet
-                </Text>
-                <Text fontSize="sm" color="gray.500" mt={2}>
-                  {activeTab === "live"
-                    ? "You haven't reported any issues yet."
-                    : "You don't have any deleted posts."}
-                </Text>
-              </Box>
-            ) : (
-              <>
-                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-                  {userPosts.map((post) => (
-                    <PostCard key={post.id} post={post} showAsYou={true} />
-                  ))}
-                </SimpleGrid>
 
-                {/* Infinite scroll sentinel */}
-                {hasMore && (
-                  <Box ref={loadMoreRef} py={8} textAlign="center">
-                    {isFetchingMore && (
-                      <>
-                        <Spinner size="md" color="blue.500" />
-                        <Text mt={2} fontSize="sm" color="gray.600">
-                          Loading more posts...
-                        </Text>
-                      </>
-                    )}
-                  </Box>
-                )}
+              {/* Infinite scroll sentinel */}
+              {hasMore && (
+                <Box ref={loadMoreRef} py={8} textAlign="center">
+                  {isFetchingMore && (
+                    <>
+                      <Spinner size="md" color="blue.500" />
+                      <Text mt={2} fontSize="sm" color="gray.600">
+                        Loading more posts...
+                      </Text>
+                    </>
+                  )}
+                </Box>
+              )}
 
-                {!hasMore && userPosts.length > 0 && (
-                  <Box py={4} textAlign="center">
-                    <Text fontSize="sm" color="gray.500">
-                      No more posts to load
-                    </Text>
-                  </Box>
-                )}
-              </>
-            )}
+              {!hasMore && userPosts.length > 0 && (
+                <Box py={4} textAlign="center">
+                  <Text fontSize="sm" color="gray.500">
+                    No more posts to load
+                  </Text>
+                </Box>
+              )}
+            </>
+          )}
           </Box>
         )}
       </VStack>
