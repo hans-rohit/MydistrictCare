@@ -363,15 +363,9 @@ export default function PostCard({ post, onDelete, showAsYou = false }) {
                     Created: N/A
                   </Text>
                 )}
-                <Text
-                  fontSize="xs"
-                  color={post?.resolvedAt ? "green.600" : "gray.400"}
-                  fontWeight={post?.resolvedAt ? "semibold" : "normal"}
-                >
+                <Text fontSize="xs" color={post?.resolvedAt ? "green.600" : "gray.400"} fontWeight={post?.resolvedAt ? "semibold" : "normal"}>
                   {post?.resolvedAt?.toDate
-                    ? `Resolved: ${post.resolvedAt
-                        .toDate()
-                        .toLocaleDateString()}`
+                    ? `Resolved: ${post.resolvedAt.toDate().toLocaleDateString()}`
                     : "Resolved: --/--/----"}
                 </Text>
               </VStack>

@@ -647,7 +647,7 @@ export default function DashboardDept({ fixedDept }) {
         status: newStatus,
         actionNote: actionNote.trim(),
       };
-
+      
       // Add resolvedAt timestamp when status is set to resolved
       if (newStatus === "resolved") {
         updateData.resolvedAt = Timestamp.now();
@@ -655,7 +655,7 @@ export default function DashboardDept({ fixedDept }) {
         // Remove resolvedAt if status is changed to anything other than resolved
         updateData.resolvedAt = null;
       }
-
+      
       await updateDoc(doc(db, "posts", postId), updateData);
       toast({ title: "Updated", status: "success", duration: 1500 });
       setStatusMap((prev) => ({ ...prev, [postId]: "" }));

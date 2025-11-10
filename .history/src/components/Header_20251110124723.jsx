@@ -256,7 +256,6 @@ export default function Header() {
               <VStack spacing={4} align="stretch">
                 <Box pt={4} borderTop="1px" borderColor="gray.200">
                   <VStack spacing={4} align="stretch">
-                    <NavLink to="/dashboard">Dashboard</NavLink>
                     <NavLink to="/dashboard/Electricity">Electricity</NavLink>
                     <NavLink to="/dashboard/Water">Water</NavLink>
                     <NavLink to="/dashboard/Sewage">Sewage</NavLink>

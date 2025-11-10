@@ -19,7 +19,7 @@ service cloud.firestore {
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
          (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'dept') &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'actionNote', 'resolvedAt'])) ||
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'actionNote'])) ||
         // Allow post creator to update their own post
         resource.data.createdBy.uid == request.auth.uid
       );

@@ -11,7 +11,6 @@ import {
   getDocs,
   limit,
   startAfter,
-  Timestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
@@ -643,20 +642,10 @@ export default function DashboardDept({ fixedDept }) {
     const actionNote = noteMap[postId] || "";
     if (!newStatus) return;
     try {
-      const updateData = {
+      await updateDoc(doc(db, "posts", postId), {
         status: newStatus,
         actionNote: actionNote.trim(),
-      };
-
-      // Add resolvedAt timestamp when status is set to resolved
-      if (newStatus === "resolved") {
-        updateData.resolvedAt = Timestamp.now();
-      } else {
-        // Remove resolvedAt if status is changed to anything other than resolved
-        updateData.resolvedAt = null;
-      }
-
-      await updateDoc(doc(db, "posts", postId), updateData);
+      });
       toast({ title: "Updated", status: "success", duration: 1500 });
       setStatusMap((prev) => ({ ...prev, [postId]: "" }));
       setNoteMap((prev) => ({ ...prev, [postId]: "" }));
