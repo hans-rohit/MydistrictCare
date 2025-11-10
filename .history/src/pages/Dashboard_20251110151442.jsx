@@ -10,7 +10,6 @@ import {
   Spinner,
   useColorModeValue,
   Select,
-  Badge,
 } from "@chakra-ui/react";
 import {
   BarChart,
@@ -40,7 +39,6 @@ export default function Dashboard() {
     byStatus: [],
     byMonth: [],
     recentActivity: [],
-    responseTime: [],
   });
   const [timeRange, setTimeRange] = useState("all"); // all, 30days, 7days
 
@@ -147,22 +145,16 @@ export default function Dashboard() {
       ];
 
       let byMonth = [];
-
+      
       if (timeRange === "7days") {
         // Show daily trend for last 7 days with department breakdown
         posts.forEach((post) => {
           if (post.createdAt?.toDate && post.departmentTag) {
             const date = post.createdAt.toDate();
             const dayKey = `${monthNames[date.getMonth()]} ${date.getDate()}`;
-
+            
             if (!dayCounts[dayKey]) {
-              dayCounts[dayKey] = {
-                period: dayKey,
-                Electricity: 0,
-                Water: 0,
-                Sewage: 0,
-                Road: 0,
-              };
+              dayCounts[dayKey] = { period: dayKey, Electricity: 0, Water: 0, Sewage: 0, Road: 0 };
             }
             dayCounts[dayKey][post.departmentTag]++;
           }
@@ -175,15 +167,9 @@ export default function Dashboard() {
             const date = post.createdAt.toDate();
             const weekNum = Math.ceil(date.getDate() / 7);
             const weekKey = `Week ${weekNum} - ${monthNames[date.getMonth()]}`;
-
+            
             if (!weekCounts[weekKey]) {
-              weekCounts[weekKey] = {
-                period: weekKey,
-                Electricity: 0,
-                Water: 0,
-                Sewage: 0,
-                Road: 0,
-              };
+              weekCounts[weekKey] = { period: weekKey, Electricity: 0, Water: 0, Sewage: 0, Road: 0 };
             }
             weekCounts[weekKey][post.departmentTag]++;
           }
@@ -194,18 +180,10 @@ export default function Dashboard() {
         posts.forEach((post) => {
           if (post.createdAt?.toDate && post.departmentTag) {
             const date = post.createdAt.toDate();
-            const monthKey = `${
-              monthNames[date.getMonth()]
-            } ${date.getFullYear()}`;
-
+            const monthKey = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+            
             if (!monthCounts[monthKey]) {
-              monthCounts[monthKey] = {
-                period: monthKey,
-                Electricity: 0,
-                Water: 0,
-                Sewage: 0,
-                Road: 0,
-              };
+              monthCounts[monthKey] = { period: monthKey, Electricity: 0, Water: 0, Sewage: 0, Road: 0 };
             }
             monthCounts[monthKey][post.departmentTag]++;
           }
@@ -217,12 +195,12 @@ export default function Dashboard() {
       const responseTime = Object.keys(deptCounts).map((dept) => {
         const deptPosts = posts.filter((p) => p.departmentTag === dept);
         const resolvedPosts = deptPosts.filter((p) => p.status === "resolved");
-
+        
         let avgDays = 0;
         let validCount = 0;
         let hasIssues = deptPosts.length > 0;
         let hasResolved = resolvedPosts.length > 0;
-
+        
         if (resolvedPosts.length > 0) {
           const totalDays = resolvedPosts.reduce((sum, post) => {
             if (post.createdAt?.toDate && post.resolvedAt?.toDate) {
@@ -238,7 +216,7 @@ export default function Dashboard() {
           }, 0);
           avgDays = validCount > 0 ? Math.round(totalDays / validCount) : 0;
         }
-
+        
         return {
           department: dept,
           avgDays: avgDays,
@@ -486,7 +464,7 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </Box>
 
-          {/* Average Resolution Time - Custom Cards */}
+          {/* Status Distribution - Bar Chart */}
           <Box
             p={6}
             bg={bgColor}
@@ -496,107 +474,28 @@ export default function Dashboard() {
             shadow="md"
           >
             <Heading size="md" mb={4} color="gray.700">
-              Average Resolution Time
+              Issues by Status
             </Heading>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-              {stats.responseTime?.map((dept) => (
-                <Box
-                  key={dept.department}
-                  p={4}
-                  borderRadius="lg"
-                  borderWidth="2px"
-                  borderColor={
-                    !dept.hasIssues
-                      ? "blue.200"
-                      : !dept.hasResolved
-                      ? "orange.200"
-                      : departmentColors[dept.department]
-                  }
-                  bg={
-                    !dept.hasIssues
-                      ? "blue.50"
-                      : !dept.hasResolved
-                      ? "orange.50"
-                      : "white"
-                  }
-                >
-                  <VStack align="start" spacing={2}>
-                    <HStack justify="space-between" w="100%">
-                      <Text fontWeight="bold" fontSize="md" color="gray.700">
-                        {dept.department}
-                      </Text>
-                      {dept.hasIssues && dept.hasResolved && (
-                        <Badge colorScheme="green" fontSize="xs" px={2} py={1}>
-                          {dept.resolved} Resolved
-                        </Badge>
-                      )}
-                    </HStack>
-
-                    {!dept.hasIssues ? (
-                      <HStack spacing={2} w="100%">
-                        <Text fontSize="2xl" color="blue.500">
-                          🎉
-                        </Text>
-                        <VStack align="start" spacing={0}>
-                          <Text
-                            fontSize="sm"
-                            fontWeight="semibold"
-                            color="blue.600"
-                          >
-                            No Issues Reported
-                          </Text>
-                          <Text fontSize="xs" color="gray.500">
-                            Clean slate for this period
-                          </Text>
-                        </VStack>
-                      </HStack>
-                    ) : !dept.hasResolved ? (
-                      <HStack spacing={2} w="100%">
-                        <Text fontSize="2xl" color="orange.500">
-                          ⏳
-                        </Text>
-                        <VStack align="start" spacing={0}>
-                          <Text
-                            fontSize="sm"
-                            fontWeight="semibold"
-                            color="orange.600"
-                          >
-                            No Issues Resolved Yet
-                          </Text>
-                          <Text fontSize="xs" color="gray.500">
-                            Pending resolution
-                          </Text>
-                        </VStack>
-                      </HStack>
-                    ) : (
-                      <HStack justify="space-between" w="100%">
-                        <VStack align="start" spacing={0}>
-                          <Text
-                            fontSize="3xl"
-                            fontWeight="extrabold"
-                            color={departmentColors[dept.department]}
-                          >
-                            {dept.avgDays}
-                          </Text>
-                          <Text fontSize="xs" color="gray.600">
-                            avg days
-                          </Text>
-                        </VStack>
-                        <Text fontSize="4xl" opacity={0.3}>
-                          ⚡
-                        </Text>
-                      </HStack>
-                    )}
-                  </VStack>
-                </Box>
-              ))}
-            </SimpleGrid>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={stats.byStatus}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="value" name="Count">
+                  {stats.byStatus.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </Box>
         </SimpleGrid>
 
         {/* Charts Row 2 */}
         <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
-          {/* Department Reporting Trend - Line Chart */}
+          {/* Monthly Trend - Line Chart */}
           <Box
             p={6}
             bg={bgColor}
@@ -606,50 +505,21 @@ export default function Dashboard() {
             shadow="md"
           >
             <Heading size="md" mb={4} color="gray.700">
-              {timeRange === "7days"
-                ? "Daily Reporting Trend"
-                : timeRange === "30days"
-                ? "Weekly Reporting Trend"
-                : "Monthly Reporting Trend"}
+              Monthly Trend
             </Heading>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={stats.byMonth}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="period" />
+                <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
                 <Line
                   type="monotone"
-                  dataKey="Electricity"
-                  stroke={departmentColors.Electricity}
-                  strokeWidth={2}
-                  name="Electricity"
-                  dot={{ fill: departmentColors.Electricity }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="Water"
-                  stroke={departmentColors.Water}
-                  strokeWidth={2}
-                  name="Water"
-                  dot={{ fill: departmentColors.Water }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="Sewage"
-                  stroke={departmentColors.Sewage}
-                  strokeWidth={2}
-                  name="Sewage"
-                  dot={{ fill: departmentColors.Sewage }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="Road"
-                  stroke={departmentColors.Road}
-                  strokeWidth={2}
-                  name="Road"
-                  dot={{ fill: departmentColors.Road }}
+                  dataKey="count"
+                  stroke="#8884d8"
+                  strokeWidth={3}
+                  name="Issues Reported"
                 />
               </LineChart>
             </ResponsiveContainer>

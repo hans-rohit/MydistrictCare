@@ -147,22 +147,16 @@ export default function Dashboard() {
       ];
 
       let byMonth = [];
-
+      
       if (timeRange === "7days") {
         // Show daily trend for last 7 days with department breakdown
         posts.forEach((post) => {
           if (post.createdAt?.toDate && post.departmentTag) {
             const date = post.createdAt.toDate();
             const dayKey = `${monthNames[date.getMonth()]} ${date.getDate()}`;
-
+            
             if (!dayCounts[dayKey]) {
-              dayCounts[dayKey] = {
-                period: dayKey,
-                Electricity: 0,
-                Water: 0,
-                Sewage: 0,
-                Road: 0,
-              };
+              dayCounts[dayKey] = { period: dayKey, Electricity: 0, Water: 0, Sewage: 0, Road: 0 };
             }
             dayCounts[dayKey][post.departmentTag]++;
           }
@@ -175,15 +169,9 @@ export default function Dashboard() {
             const date = post.createdAt.toDate();
             const weekNum = Math.ceil(date.getDate() / 7);
             const weekKey = `Week ${weekNum} - ${monthNames[date.getMonth()]}`;
-
+            
             if (!weekCounts[weekKey]) {
-              weekCounts[weekKey] = {
-                period: weekKey,
-                Electricity: 0,
-                Water: 0,
-                Sewage: 0,
-                Road: 0,
-              };
+              weekCounts[weekKey] = { period: weekKey, Electricity: 0, Water: 0, Sewage: 0, Road: 0 };
             }
             weekCounts[weekKey][post.departmentTag]++;
           }
@@ -194,18 +182,10 @@ export default function Dashboard() {
         posts.forEach((post) => {
           if (post.createdAt?.toDate && post.departmentTag) {
             const date = post.createdAt.toDate();
-            const monthKey = `${
-              monthNames[date.getMonth()]
-            } ${date.getFullYear()}`;
-
+            const monthKey = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+            
             if (!monthCounts[monthKey]) {
-              monthCounts[monthKey] = {
-                period: monthKey,
-                Electricity: 0,
-                Water: 0,
-                Sewage: 0,
-                Road: 0,
-              };
+              monthCounts[monthKey] = { period: monthKey, Electricity: 0, Water: 0, Sewage: 0, Road: 0 };
             }
             monthCounts[monthKey][post.departmentTag]++;
           }
@@ -217,12 +197,12 @@ export default function Dashboard() {
       const responseTime = Object.keys(deptCounts).map((dept) => {
         const deptPosts = posts.filter((p) => p.departmentTag === dept);
         const resolvedPosts = deptPosts.filter((p) => p.status === "resolved");
-
+        
         let avgDays = 0;
         let validCount = 0;
         let hasIssues = deptPosts.length > 0;
         let hasResolved = resolvedPosts.length > 0;
-
+        
         if (resolvedPosts.length > 0) {
           const totalDays = resolvedPosts.reduce((sum, post) => {
             if (post.createdAt?.toDate && post.resolvedAt?.toDate) {
@@ -238,7 +218,7 @@ export default function Dashboard() {
           }, 0);
           avgDays = validCount > 0 ? Math.round(totalDays / validCount) : 0;
         }
-
+        
         return {
           department: dept,
           avgDays: avgDays,
@@ -526,23 +506,24 @@ export default function Dashboard() {
                         {dept.department}
                       </Text>
                       {dept.hasIssues && dept.hasResolved && (
-                        <Badge colorScheme="green" fontSize="xs" px={2} py={1}>
+                        <Badge
+                          colorScheme="green"
+                          fontSize="xs"
+                          px={2}
+                          py={1}
+                        >
                           {dept.resolved} Resolved
                         </Badge>
                       )}
                     </HStack>
-
+                    
                     {!dept.hasIssues ? (
                       <HStack spacing={2} w="100%">
                         <Text fontSize="2xl" color="blue.500">
                           🎉
                         </Text>
                         <VStack align="start" spacing={0}>
-                          <Text
-                            fontSize="sm"
-                            fontWeight="semibold"
-                            color="blue.600"
-                          >
+                          <Text fontSize="sm" fontWeight="semibold" color="blue.600">
                             No Issues Reported
                           </Text>
                           <Text fontSize="xs" color="gray.500">
@@ -556,11 +537,7 @@ export default function Dashboard() {
                           ⏳
                         </Text>
                         <VStack align="start" spacing={0}>
-                          <Text
-                            fontSize="sm"
-                            fontWeight="semibold"
-                            color="orange.600"
-                          >
+                          <Text fontSize="sm" fontWeight="semibold" color="orange.600">
                             No Issues Resolved Yet
                           </Text>
                           <Text fontSize="xs" color="gray.500">
@@ -571,11 +548,7 @@ export default function Dashboard() {
                     ) : (
                       <HStack justify="space-between" w="100%">
                         <VStack align="start" spacing={0}>
-                          <Text
-                            fontSize="3xl"
-                            fontWeight="extrabold"
-                            color={departmentColors[dept.department]}
-                          >
+                          <Text fontSize="3xl" fontWeight="extrabold" color={departmentColors[dept.department]}>
                             {dept.avgDays}
                           </Text>
                           <Text fontSize="xs" color="gray.600">
