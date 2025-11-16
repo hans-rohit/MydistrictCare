@@ -12,6 +12,8 @@ import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import PrivateRoute from "./components/PrivateRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import 'leaflet/dist/leaflet.css';
+
 
 function DeptRedirect() {
   const { profile } = useAuth();
