@@ -12,7 +12,6 @@ import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import PrivateRoute from "./components/PrivateRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import Chatbot from "./components/Chatbot";
 import "leaflet/dist/leaflet.css";
 
 function DeptRedirect() {
@@ -101,9 +100,6 @@ export default function App() {
                 <Route path="/admin" element={<Admin />} />
               </Route>
             </Routes>
-
-            {/* AI Chatbot - Available on all pages */}
-            <Chatbot />
           </Box>
         </BrowserRouter>
       </AuthProvider>

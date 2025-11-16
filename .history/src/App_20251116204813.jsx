@@ -101,9 +101,6 @@ export default function App() {
                 <Route path="/admin" element={<Admin />} />
               </Route>
             </Routes>
-
-            {/* AI Chatbot - Available on all pages */}
-            <Chatbot />
           </Box>
         </BrowserRouter>
       </AuthProvider>
