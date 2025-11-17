@@ -1,12 +1,6 @@
 import { ChakraProvider, Box } from "@chakra-ui/react";
 import theme from "./theme";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  useLocation,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
@@ -57,11 +51,10 @@ function FooterWrapper() {
 function ChatbotWrapper() {
   const { user } = useAuth();
   const location = useLocation();
-
+  
   // Don't show chatbot on login or signup pages, and only show when user is logged in
-  const isAuthPage =
-    location.pathname === "/login" || location.pathname === "/signup";
-
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
+  
   if (user && !isAuthPage) {
     return <Chatbot />;
   }
