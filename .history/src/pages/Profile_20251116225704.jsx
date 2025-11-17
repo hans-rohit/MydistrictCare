@@ -55,121 +55,6 @@ export default function Profile() {
   const loadMoreRef = useRef(null);
   const PAGE_SIZE = 6;
 
-  // Edit profile states
-  const {
-    isOpen: isNameOpen,
-    onOpen: onNameOpen,
-    onClose: onNameClose,
-  } = useDisclosure();
-  const {
-    isOpen: isPasswordOpen,
-    onOpen: onPasswordOpen,
-    onClose: onPasswordClose,
-  } = useDisclosure();
-  const [newName, setNewName] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [updating, setUpdating] = useState(false);
-  const toast = useToast();
-
-  // Update name
-  const handleUpdateName = async () => {
-    if (!newName.trim()) {
-      toast({
-        title: "Error",
-        description: "Name cannot be empty",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    setUpdating(true);
-    try {
-      // Update Firebase Auth profile
-      await updateProfile(user, { displayName: newName });
-
-      // Update Firestore user document
-      const userDocRef = doc(db, "users", user.uid);
-      await updateDoc(userDocRef, { name: newName });
-
-      toast({
-        title: "Success",
-        description: "Name updated successfully!",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-      onNameClose();
-      setNewName("");
-    } catch (error) {
-      console.error("Error updating name:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update name",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  // Update password
-  const handleUpdatePassword = async () => {
-    if (newPassword.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    setUpdating(true);
-    try {
-      await updatePassword(user, newPassword);
-      toast({
-        title: "Success",
-        description: "Password updated successfully!",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-      onPasswordClose();
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error) {
-      console.error("Error updating password:", error);
-      toast({
-        title: "Error",
-        description:
-          error.message ||
-          "Failed to update password. You may need to re-login.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-    } finally {
-      setUpdating(false);
-    }
-  };
-
   // Fetch user's posts with pagination
   const fetchUserPosts = async (isLoadMore = false) => {
     if (!user) {
@@ -341,37 +226,30 @@ export default function Profile() {
                   transform: "translateY(-2px)",
                 }}
               >
-                <HStack justify="space-between" align="center">
-                  <VStack align="start" spacing={1} flex={1}>
-                    <Text
-                      fontSize={{ base: "xs", md: "sm" }}
-                      fontWeight="bold"
-                      color="gray.700"
-                      textTransform="uppercase"
-                      letterSpacing="wide"
-                    >
-                      Name
-                    </Text>
-                    <Text
-                      fontSize={{ base: "md", md: "lg" }}
-                      fontWeight="semibold"
-                      color="gray.900"
-                      wordBreak="break-word"
-                    >
-                      {profile?.name || user?.displayName || "Not set"}
-                    </Text>
-                  </VStack>
-                  <IconButton
-                    icon={<EditIcon />}
-                    size="sm"
-                    colorScheme="blue"
-                    variant="ghost"
-                    onClick={() => {
-                      setNewName(profile?.name || user?.displayName || "");
-                      onNameOpen();
-                    }}
-                    aria-label="Edit name"
-                  />
+                <HStack
+                  justify="space-between"
+                  align={{ base: "flex-start", md: "center" }}
+                  flexDirection={{ base: "column", md: "row" }}
+                  spacing={{ base: 2, md: 0 }}
+                >
+                  <Text
+                    fontSize={{ base: "xs", md: "sm" }}
+                    fontWeight="bold"
+                    color="gray.700"
+                    textTransform="uppercase"
+                    letterSpacing="wide"
+                  >
+                    Name
+                  </Text>
+                  <Text
+                    fontSize={{ base: "md", md: "lg" }}
+                    fontWeight="semibold"
+                    color="gray.900"
+                    wordBreak="break-word"
+                    textAlign={{ base: "left", md: "right" }}
+                  >
+                    {profile?.name || user?.displayName || "Not set"}
+                  </Text>
                 </HStack>
               </Box>
 
@@ -428,35 +306,30 @@ export default function Profile() {
                   transform: "translateY(-2px)",
                 }}
               >
-                <HStack justify="space-between" align="center">
-                  <VStack align="start" spacing={1} flex={1}>
-                    <Text
-                      fontSize={{ base: "xs", md: "sm" }}
-                      fontWeight="bold"
-                      color="gray.700"
-                      textTransform="uppercase"
-                      letterSpacing="wide"
-                    >
-                      Password
-                    </Text>
-                    <Text
-                      fontSize={{ base: "md", md: "lg" }}
-                      fontWeight="semibold"
-                      color="gray.900"
-                      letterSpacing="wider"
-                      fontFamily="mono"
-                    >
-                      ••••••••••
-                    </Text>
-                  </VStack>
-                  <IconButton
-                    icon={<EditIcon />}
-                    size="sm"
-                    colorScheme="green"
-                    variant="ghost"
-                    onClick={onPasswordOpen}
-                    aria-label="Change password"
-                  />
+                <HStack
+                  justify="space-between"
+                  align={{ base: "flex-start", md: "center" }}
+                  flexDirection={{ base: "column", md: "row" }}
+                  spacing={{ base: 2, md: 0 }}
+                >
+                  <Text
+                    fontSize={{ base: "xs", md: "sm" }}
+                    fontWeight="bold"
+                    color="gray.700"
+                    textTransform="uppercase"
+                    letterSpacing="wide"
+                  >
+                    Password
+                  </Text>
+                  <Text
+                    fontSize={{ base: "md", md: "lg" }}
+                    fontWeight="semibold"
+                    color="gray.900"
+                    letterSpacing="wider"
+                    fontFamily="mono"
+                  >
+                    ••••••••••
+                  </Text>
                 </HStack>
               </Box>
 
@@ -649,80 +522,6 @@ export default function Profile() {
           </Box>
         )}
       </VStack>
-
-      {/* Edit Name Modal */}
-      <Modal isOpen={isNameOpen} onClose={onNameClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Edit Name</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <FormControl>
-              <FormLabel>New Name</FormLabel>
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Enter your new name"
-              />
-            </FormControl>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onNameClose}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="blue"
-              onClick={handleUpdateName}
-              isLoading={updating}
-            >
-              Update
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Edit Password Modal */}
-      <Modal isOpen={isPasswordOpen} onClose={onPasswordClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Change Password</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>New Password</FormLabel>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password (min 6 characters)"
-                />
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Confirm Password</FormLabel>
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                />
-              </FormControl>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onPasswordClose}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="green"
-              onClick={handleUpdatePassword}
-              isLoading={updating}
-            >
-              Update Password
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </Container>
   );
 }

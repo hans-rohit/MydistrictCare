@@ -61,10 +61,10 @@ export default function Header() {
         py={2}
         borderRadius="lg"
         transition="all 0.3s"
-        _hover={{
+        _hover={{ 
           bg: isActive ? "blue.100" : "gray.100",
           transform: "translateY(-2px)",
-          shadow: "sm",
+          shadow: "sm"
         }}
         bg={isActive ? "blue.50" : "transparent"}
         color={isActive ? "blue.600" : "gray.700"}
@@ -78,7 +78,7 @@ export default function Header() {
   const isAdmin = profile?.role === "admin";
   const isDept = profile?.role === "dept";
   const dept = profile?.department;
-
+  
   const bgColor = useColorModeValue("white", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.700");
 
@@ -114,9 +114,7 @@ export default function Header() {
               bgClip="text"
               _hover={{ transform: "scale(1.02)", transition: "all 0.2s" }}
             >
-              <MdHealthAndSafety
-                style={{ color: "#2B6CB0", fontSize: "1.5rem" }}
-              />
+              <MdHealthAndSafety style={{ color: "#2B6CB0", fontSize: "1.5rem" }} />
               District Care
             </Link>
           </Heading>
@@ -138,7 +136,7 @@ export default function Header() {
                     ? "linear(to-r, purple.500, pink.500)"
                     : profile?.role === "dept"
                     ? "linear(to-r, orange.500, red.500)"
-                    : "linear(to-r, green.500, teal.500)"
+                    : "linear(to-r, blue.500, teal.500)"
                 }
                 color="white"
                 textTransform="capitalize"
@@ -172,9 +170,7 @@ export default function Header() {
           fontFamily="'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
         >
           {/* Home - for public and non-logged users */}
-          {(!user || profile?.role === "public") && (
-            <NavLink to="/">Home</NavLink>
-          )}
+          {(!user || profile?.role === "public") && <NavLink to="/">Home</NavLink>}
 
           {/* Feed - only for public and admin */}
           {(!user ||
@@ -226,7 +222,7 @@ export default function Header() {
                     ? "linear(to-r, purple.500, pink.500)"
                     : profile?.role === "dept"
                     ? "linear(to-r, orange.500, red.500)"
-                    : "linear(to-r, green.500, teal.500)"
+                    : "linear(to-r, blue.500, teal.500)"
                 }
                 color="white"
                 textTransform="capitalize"
@@ -249,7 +245,7 @@ export default function Header() {
                 _hover={{
                   bgGradient: "linear(to-r, blue.600, teal.500)",
                   shadow: "md",
-                  transform: "translateY(-1px)",
+                  transform: "translateY(-1px)"
                 }}
                 transition="all 0.2s"
               >
@@ -258,10 +254,10 @@ export default function Header() {
             </HStack>
           ) : (
             <HStack spacing={3}>
-              <Button
-                size="sm"
-                as={RouterLink}
-                to="/login"
+              <Button 
+                size="sm" 
+                as={RouterLink} 
+                to="/login" 
                 variant="ghost"
                 fontWeight="600"
                 borderRadius="lg"
@@ -270,19 +266,19 @@ export default function Header() {
               >
                 Login
               </Button>
-              <Button
-                size="sm"
-                as={RouterLink}
-                to="/signup"
+              <Button 
+                size="sm" 
+                as={RouterLink} 
+                to="/signup" 
                 bgGradient="linear(to-r, blue.500, teal.400)"
                 color="white"
                 fontWeight="600"
                 borderRadius="lg"
                 shadow="sm"
-                _hover={{
+                _hover={{ 
                   bgGradient: "linear(to-r, blue.600, teal.500)",
                   shadow: "md",
-                  transform: "translateY(-1px)",
+                  transform: "translateY(-1px)" 
                 }}
                 transition="all 0.2s"
               >
@@ -318,11 +314,11 @@ export default function Header() {
           shadow="xl"
           overflowY="auto"
         >
-          <VStack
-            spacing={6}
-            align="stretch"
-            p={6}
-            h="100%"
+          <VStack 
+            spacing={6} 
+            align="stretch" 
+            p={6} 
+            h="100%" 
             w="100%"
             fontFamily="'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
           >
@@ -386,9 +382,9 @@ export default function Header() {
                   borderRadius="lg"
                   fontWeight="600"
                   shadow="sm"
-                  _hover={{
+                  _hover={{ 
                     bgGradient: "linear(to-r, blue.600, teal.500)",
-                    shadow: "md",
+                    shadow: "md"
                   }}
                   size="md"
                 >
@@ -396,13 +392,7 @@ export default function Header() {
                 </Button>
               </Box>
             ) : (
-              <VStack
-                spacing={3}
-                align="stretch"
-                pt={4}
-                borderTop="2px"
-                borderColor="gray.200"
-              >
+              <VStack spacing={3} align="stretch" pt={4} borderTop="2px" borderColor="gray.200">
                 <Button
                   as={RouterLink}
                   to="/login"
@@ -425,9 +415,9 @@ export default function Header() {
                   fontWeight="600"
                   shadow="sm"
                   onClick={onClose}
-                  _hover={{
+                  _hover={{ 
                     bgGradient: "linear(to-r, blue.600, teal.500)",
-                    shadow: "md",
+                    shadow: "md"
                   }}
                 >
                   Sign Up

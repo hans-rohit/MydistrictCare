@@ -160,10 +160,7 @@ export default function App() {
 
               {/* Dynamic analytics route for dept admins */}
               <Route element={<PrivateRoute requireRole="dept" />}>
-                <Route
-                  path="/analytics/:dept"
-                  element={<DashboardAnalytics />}
-                />
+                <Route path="/analytics/:dept" element={<DashboardAnalytics />} />
               </Route>
 
               {/* Analytics Dashboard for Admin */}
@@ -183,7 +180,7 @@ export default function App() {
 
             {/* AI Chatbot - Available on all pages */}
             <Chatbot />
-
+            
             {/* Footer - Only for public and non-logged users */}
             <FooterWrapper />
           </Box>

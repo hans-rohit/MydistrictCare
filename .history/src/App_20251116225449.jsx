@@ -2,14 +2,12 @@ import { ChakraProvider, Box } from "@chakra-ui/react";
 import theme from "./theme";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Header from "./components/Header";
-import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import CreatePost from "./pages/CreatePost";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import DashboardDept from "./pages/DashboardDept";
 import Dashboard from "./pages/Dashboard";
-import DashboardAnalytics from "./pages/DashboardAnalytics";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import PrivateRoute from "./components/PrivateRoute";
@@ -39,15 +37,6 @@ function HomeRedirect() {
   return <Home />;
 }
 
-function FooterWrapper() {
-  const { user, profile } = useAuth();
-  // Show footer only for non-logged users or public users
-  if (!user || profile?.role === "public") {
-    return <Footer />;
-  }
-  return null;
-}
-
 export default function App() {
   return (
     <ChakraProvider theme={theme}>
@@ -57,7 +46,7 @@ export default function App() {
             <Header />
             <Routes>
               <Route path="/" element={<HomeRedirect />} />
-
+              
               {/* Feed - only for public users and admin */}
               <Route path="/feed" element={<Home showIntro={false} />} />
 
@@ -68,7 +57,7 @@ export default function App() {
               <Route element={<PrivateRoute requireRole="public" />}>
                 <Route path="/create" element={<CreatePost />} />
               </Route>
-
+              
               <Route element={<PrivateRoute />}>
                 <Route path="/profile" element={<Profile />} />
               </Route>
@@ -118,54 +107,6 @@ export default function App() {
                 <Route path="/dashboard/:dept" element={<DashboardDept />} />
               </Route>
 
-              {/* Analytics Dashboard for Dept Admins */}
-              <Route
-                element={
-                  <PrivateRoute requireRole="dept" requireDept="Electricity" />
-                }
-              >
-                <Route
-                  path="/analytics/Electricity"
-                  element={<DashboardAnalytics />}
-                />
-              </Route>
-              <Route
-                element={
-                  <PrivateRoute requireRole="dept" requireDept="Water" />
-                }
-              >
-                <Route
-                  path="/analytics/Water"
-                  element={<DashboardAnalytics />}
-                />
-              </Route>
-              <Route
-                element={
-                  <PrivateRoute requireRole="dept" requireDept="Sewage" />
-                }
-              >
-                <Route
-                  path="/analytics/Sewage"
-                  element={<DashboardAnalytics />}
-                />
-              </Route>
-              <Route
-                element={<PrivateRoute requireRole="dept" requireDept="Road" />}
-              >
-                <Route
-                  path="/analytics/Road"
-                  element={<DashboardAnalytics />}
-                />
-              </Route>
-
-              {/* Dynamic analytics route for dept admins */}
-              <Route element={<PrivateRoute requireRole="dept" />}>
-                <Route
-                  path="/analytics/:dept"
-                  element={<DashboardAnalytics />}
-                />
-              </Route>
-
               {/* Analytics Dashboard for Admin */}
               <Route element={<PrivateRoute requireRole="admin" />}>
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -183,9 +124,6 @@ export default function App() {
 
             {/* AI Chatbot - Available on all pages */}
             <Chatbot />
-
-            {/* Footer - Only for public and non-logged users */}
-            <FooterWrapper />
           </Box>
         </BrowserRouter>
       </AuthProvider>

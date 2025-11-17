@@ -2,7 +2,6 @@ import { ChakraProvider, Box } from "@chakra-ui/react";
 import theme from "./theme";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Header from "./components/Header";
-import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import CreatePost from "./pages/CreatePost";
 import Login from "./pages/Login";
@@ -37,15 +36,6 @@ function HomeRedirect() {
   }
   // Public users see normal home
   return <Home />;
-}
-
-function FooterWrapper() {
-  const { user, profile } = useAuth();
-  // Show footer only for non-logged users or public users
-  if (!user || profile?.role === "public") {
-    return <Footer />;
-  }
-  return null;
 }
 
 export default function App() {
@@ -160,10 +150,7 @@ export default function App() {
 
               {/* Dynamic analytics route for dept admins */}
               <Route element={<PrivateRoute requireRole="dept" />}>
-                <Route
-                  path="/analytics/:dept"
-                  element={<DashboardAnalytics />}
-                />
+                <Route path="/analytics/:dept" element={<DashboardAnalytics />} />
               </Route>
 
               {/* Analytics Dashboard for Admin */}
@@ -183,9 +170,6 @@ export default function App() {
 
             {/* AI Chatbot - Available on all pages */}
             <Chatbot />
-
-            {/* Footer - Only for public and non-logged users */}
-            <FooterWrapper />
           </Box>
         </BrowserRouter>
       </AuthProvider>

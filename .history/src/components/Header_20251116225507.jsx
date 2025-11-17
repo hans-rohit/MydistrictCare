@@ -12,7 +12,6 @@ import {
   VStack,
   useDisclosure,
   useBreakpointValue,
-  useColorModeValue,
 } from "@chakra-ui/react";
 import { HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
 import { MdHealthAndSafety } from "react-icons/md";
@@ -56,18 +55,13 @@ export default function Header() {
       <Link
         as={RouterLink}
         to={to}
-        fontWeight="600"
-        px={3}
-        py={2}
-        borderRadius="lg"
-        transition="all 0.3s"
-        _hover={{
-          bg: isActive ? "blue.100" : "gray.100",
-          transform: "translateY(-2px)",
-          shadow: "sm",
-        }}
+        fontWeight="bold"
+        p={2}
+        borderRadius="md"
+        _hover={{ bg: "gray.100" }}
+        _active={{ bg: "gray.200" }}
         bg={isActive ? "blue.50" : "transparent"}
-        color={isActive ? "blue.600" : "gray.700"}
+        color={isActive ? "blue.600" : "gray.600"}
         onClick={handleClick}
       >
         {children}
@@ -79,20 +73,16 @@ export default function Header() {
   const isDept = profile?.role === "dept";
   const dept = profile?.department;
 
-  const bgColor = useColorModeValue("white", "gray.800");
-  const borderColor = useColorModeValue("gray.200", "gray.700");
-
   return (
     <Box
       position="sticky"
       top={0}
       zIndex={1000}
-      bg={bgColor}
-      borderBottom="2px solid"
-      borderColor={borderColor}
+      bg="white"
+      borderBottom="1px solid"
+      borderColor="gray.200"
       mb={4}
-      shadow="md"
-      backdropFilter="blur(10px)"
+      shadow="sm"
       css={{
         '&[data-menu-open="true"]': {
           position: "fixed",
@@ -101,22 +91,19 @@ export default function Header() {
       }}
       data-menu-open={isOpen}
     >
-      <Flex px={4} py={3} align="center" wrap="wrap" gap={2}>
+      <Flex p={3} align="center" wrap="wrap" gap={2}>
         <Box flex={{ base: "1", md: "1" }}>
-          <Heading size="lg" fontWeight="bold">
+          <Heading size="md">
             <Link
               as={RouterLink}
               to="/"
               display="flex"
               alignItems="center"
-              gap={2}
+              gap={0.5}
               bgGradient="linear(to-r, blue.600, teal.500)"
               bgClip="text"
-              _hover={{ transform: "scale(1.02)", transition: "all 0.2s" }}
             >
-              <MdHealthAndSafety
-                style={{ color: "#2B6CB0", fontSize: "1.5rem" }}
-              />
+              <MdHealthAndSafety style={{ color: "#2B6CB0" }} />
               District Care
             </Link>
           </Heading>
@@ -128,20 +115,13 @@ export default function Header() {
             {user && (
               <Badge
                 display={{ base: "flex", md: "none" }}
-                px={2}
-                py={1}
-                borderRadius="md"
-                fontSize="xs"
-                fontWeight="600"
-                bgGradient={
+                colorScheme={
                   profile?.role === "admin"
-                    ? "linear(to-r, purple.500, pink.500)"
+                    ? "purple"
                     : profile?.role === "dept"
-                    ? "linear(to-r, orange.500, red.500)"
-                    : "linear(to-r, green.500, teal.500)"
+                    ? "orange"
+                    : "purple"
                 }
-                color="white"
-                textTransform="capitalize"
               >
                 {profile?.role ? `${profile.role}` : "Public"}
               </Badge>
@@ -169,23 +149,17 @@ export default function Header() {
           flex="2"
           justifyContent="center"
           display={{ base: "none", md: "flex" }}
-          fontFamily="'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
         >
-          {/* Home - for public and non-logged users */}
-          {(!user || profile?.role === "public") && (
-            <NavLink to="/">Home</NavLink>
-          )}
-
           {/* Feed - only for public and admin */}
-          {(!user ||
-            profile?.role === "public" ||
-            profile?.role === "admin") && <NavLink to="/feed">Feed</NavLink>}
-
+          {(!user || profile?.role === "public" || profile?.role === "admin") && (
+            <NavLink to="/feed">Feed</NavLink>
+          )}
+          
           {/* Create - only for public users */}
           {user && profile?.role === "public" && (
             <NavLink to="/create">Create</NavLink>
           )}
-
+          
           {user && <NavLink to="/profile">Profile</NavLink>}
 
           {isAdmin && (
@@ -200,10 +174,7 @@ export default function Header() {
           )}
 
           {isDept && dept && (
-            <>
-              <NavLink to={`/analytics/${dept}`}>Dashboard</NavLink>
-              <NavLink to={`/dashboard/${dept}`}>{dept}</NavLink>
-            </>
+            <NavLink to={`/dashboard/${dept}`}>{dept}</NavLink>
           )}
         </HStack>
 
@@ -214,23 +185,15 @@ export default function Header() {
           justifyContent="flex-end"
         >
           {user ? (
-            <HStack spacing={3}>
+            <HStack>
               <Badge
-                px={3}
-                py={1}
-                borderRadius="lg"
-                fontSize="sm"
-                fontWeight="600"
-                bgGradient={
+                colorScheme={
                   profile?.role === "admin"
-                    ? "linear(to-r, purple.500, pink.500)"
+                    ? "purple"
                     : profile?.role === "dept"
-                    ? "linear(to-r, orange.500, red.500)"
-                    : "linear(to-r, green.500, teal.500)"
+                    ? "orange"
+                    : "purple"
                 }
-                color="white"
-                textTransform="capitalize"
-                shadow="sm"
               >
                 {profile?.role
                   ? `${profile.role}${
@@ -243,49 +206,19 @@ export default function Header() {
                 onClick={handleLogout}
                 bgGradient="linear(to-r, blue.500, teal.400)"
                 color="white"
-                borderRadius="lg"
-                fontWeight="600"
-                shadow="sm"
                 _hover={{
                   bgGradient: "linear(to-r, blue.600, teal.500)",
-                  shadow: "md",
-                  transform: "translateY(-1px)",
                 }}
-                transition="all 0.2s"
               >
                 Logout
               </Button>
             </HStack>
           ) : (
-            <HStack spacing={3}>
-              <Button
-                size="sm"
-                as={RouterLink}
-                to="/login"
-                variant="ghost"
-                fontWeight="600"
-                borderRadius="lg"
-                _hover={{ bg: "gray.100", transform: "translateY(-1px)" }}
-                transition="all 0.2s"
-              >
+            <HStack>
+              <Button size="sm" as={RouterLink} to="/login" variant="ghost">
                 Login
               </Button>
-              <Button
-                size="sm"
-                as={RouterLink}
-                to="/signup"
-                bgGradient="linear(to-r, blue.500, teal.400)"
-                color="white"
-                fontWeight="600"
-                borderRadius="lg"
-                shadow="sm"
-                _hover={{
-                  bgGradient: "linear(to-r, blue.600, teal.500)",
-                  shadow: "md",
-                  transform: "translateY(-1px)",
-                }}
-                transition="all 0.2s"
-              >
+              <Button size="sm" as={RouterLink} to="/signup" colorScheme="blue">
                 Sign Up
               </Button>
             </HStack>
@@ -318,41 +251,27 @@ export default function Header() {
           shadow="xl"
           overflowY="auto"
         >
-          <VStack
-            spacing={6}
-            align="stretch"
-            p={6}
-            h="100%"
-            w="100%"
-            fontFamily="'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-          >
+          <VStack spacing={6} align="stretch" p={6} h="100%" w="100%">
             {/* Main Navigation */}
             <VStack spacing={4} align="stretch">
-              {/* Home - for public and non-logged users */}
-              {(!user || profile?.role === "public") && (
-                <NavLink to="/">Home</NavLink>
-              )}
-
               {/* Feed - only for public and admin */}
-              {(!user ||
-                profile?.role === "public" ||
-                profile?.role === "admin") && (
+              {(!user || profile?.role === "public" || profile?.role === "admin") && (
                 <NavLink to="/feed">Feed</NavLink>
               )}
-
+              
               {/* Create - only for public users */}
               {user && profile?.role === "public" && (
                 <NavLink to="/create">Create</NavLink>
               )}
-
+              
               {user && <NavLink to="/profile">Profile</NavLink>}
             </VStack>
 
             {/* Department Links with Separator */}
             {isAdmin && (
               <VStack spacing={4} align="stretch">
-                <Box pt={4} borderTop="2px" borderColor="gray.200">
-                  <VStack spacing={3} align="stretch">
+                <Box pt={4} borderTop="1px" borderColor="gray.200">
+                  <VStack spacing={4} align="stretch">
                     <NavLink to="/dashboard">Dashboard</NavLink>
                     <NavLink to="/dashboard/Electricity">Electricity</NavLink>
                     <NavLink to="/dashboard/Water">Water</NavLink>
@@ -366,69 +285,42 @@ export default function Header() {
 
             {isDept && dept && (
               <VStack spacing={4} align="stretch">
-                <Box pt={4} borderTop="2px" borderColor="gray.200">
-                  <VStack spacing={3} align="stretch">
-                    <NavLink to={`/analytics/${dept}`}>Dashboard</NavLink>
-                    <NavLink to={`/dashboard/${dept}`}>{dept}</NavLink>
-                  </VStack>
+                <Box pt={4} borderTop="1px" borderColor="gray.200">
+                  <NavLink to={`/dashboard/${dept}`}>{dept}</NavLink>
                 </Box>
               </VStack>
             )}
 
             {/* Auth Buttons */}
             {user ? (
-              <Box mt={4} pt={4} borderTop="2px" borderColor="gray.200">
+              <Box mt={3}>
                 <Button
-                  w="full"
                   onClick={handleLogout}
                   bgGradient="linear(to-r, blue.500, teal.400)"
                   color="white"
-                  borderRadius="lg"
-                  fontWeight="600"
-                  shadow="sm"
-                  _hover={{
-                    bgGradient: "linear(to-r, blue.600, teal.500)",
-                    shadow: "md",
-                  }}
+                  _hover={{ bgGradient: "linear(to-r, blue.600, teal.500)" }}
                   size="md"
                 >
                   Logout
                 </Button>
               </Box>
             ) : (
-              <VStack
-                spacing={3}
-                align="stretch"
-                pt={4}
-                borderTop="2px"
-                borderColor="gray.200"
-              >
+              <VStack spacing={4} align="stretch" pt={4}>
                 <Button
                   as={RouterLink}
                   to="/login"
                   variant="ghost"
                   size="md"
-                  borderRadius="lg"
-                  fontWeight="600"
                   onClick={onClose}
-                  _hover={{ bg: "gray.100" }}
                 >
                   Login
                 </Button>
                 <Button
                   as={RouterLink}
                   to="/signup"
-                  bgGradient="linear(to-r, blue.500, teal.400)"
-                  color="white"
+                  colorScheme="blue"
                   size="md"
-                  borderRadius="lg"
-                  fontWeight="600"
-                  shadow="sm"
                   onClick={onClose}
-                  _hover={{
-                    bgGradient: "linear(to-r, blue.600, teal.500)",
-                    shadow: "md",
-                  }}
                 >
                   Sign Up
                 </Button>

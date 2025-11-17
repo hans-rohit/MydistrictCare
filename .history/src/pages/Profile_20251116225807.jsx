@@ -56,16 +56,8 @@ export default function Profile() {
   const PAGE_SIZE = 6;
 
   // Edit profile states
-  const {
-    isOpen: isNameOpen,
-    onOpen: onNameOpen,
-    onClose: onNameClose,
-  } = useDisclosure();
-  const {
-    isOpen: isPasswordOpen,
-    onOpen: onPasswordOpen,
-    onClose: onPasswordClose,
-  } = useDisclosure();
+  const { isOpen: isNameOpen, onOpen: onNameOpen, onClose: onNameClose } = useDisclosure();
+  const { isOpen: isPasswordOpen, onOpen: onPasswordOpen, onClose: onPasswordClose } = useDisclosure();
   const [newName, setNewName] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -89,7 +81,7 @@ export default function Profile() {
     try {
       // Update Firebase Auth profile
       await updateProfile(user, { displayName: newName });
-
+      
       // Update Firestore user document
       const userDocRef = doc(db, "users", user.uid);
       await updateDoc(userDocRef, { name: newName });
@@ -158,9 +150,7 @@ export default function Profile() {
       console.error("Error updating password:", error);
       toast({
         title: "Error",
-        description:
-          error.message ||
-          "Failed to update password. You may need to re-login.",
+        description: error.message || "Failed to update password. You may need to re-login.",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -341,7 +331,10 @@ export default function Profile() {
                   transform: "translateY(-2px)",
                 }}
               >
-                <HStack justify="space-between" align="center">
+                <HStack
+                  justify="space-between"
+                  align="center"
+                >
                   <VStack align="start" spacing={1} flex={1}>
                     <Text
                       fontSize={{ base: "xs", md: "sm" }}
@@ -428,7 +421,10 @@ export default function Profile() {
                   transform: "translateY(-2px)",
                 }}
               >
-                <HStack justify="space-between" align="center">
+                <HStack
+                  justify="space-between"
+                  align="center"
+                >
                   <VStack align="start" spacing={1} flex={1}>
                     <Text
                       fontSize={{ base: "xs", md: "sm" }}
@@ -649,80 +645,6 @@ export default function Profile() {
           </Box>
         )}
       </VStack>
-
-      {/* Edit Name Modal */}
-      <Modal isOpen={isNameOpen} onClose={onNameClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Edit Name</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <FormControl>
-              <FormLabel>New Name</FormLabel>
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Enter your new name"
-              />
-            </FormControl>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onNameClose}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="blue"
-              onClick={handleUpdateName}
-              isLoading={updating}
-            >
-              Update
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Edit Password Modal */}
-      <Modal isOpen={isPasswordOpen} onClose={onPasswordClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Change Password</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>New Password</FormLabel>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password (min 6 characters)"
-                />
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Confirm Password</FormLabel>
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                />
-              </FormControl>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onPasswordClose}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="green"
-              onClick={handleUpdatePassword}
-              isLoading={updating}
-            >
-              Update Password
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </Container>
   );
 }
