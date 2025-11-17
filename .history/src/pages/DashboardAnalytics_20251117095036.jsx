@@ -28,7 +28,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { collection, query, getDocs, where } from "firebase/firestore";
+import { collection, query, getDocs, where, Timestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 
@@ -75,32 +75,32 @@ export default function DashboardAnalytics() {
     setLoading(true);
     try {
       const postsRef = collection(db, "posts");
-      const q = query(postsRef, where("departmentTag", "==", dept));
-
-      const snapshot = await getDocs(q);
-      let posts = snapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .filter((post) => !post.deleted); // Exclude deleted posts
-
-      // Apply time range filter in JavaScript
+      
+      // Apply time range filter
+      let q;
       if (timeRange !== "all") {
         const now = new Date();
         const daysAgo = timeRange === "7days" ? 7 : 30;
         const startDate = new Date();
         startDate.setDate(now.getDate() - daysAgo);
-        startDate.setHours(0, 0, 0, 0);
-
-        posts = posts.filter((post) => {
-          if (post.createdAt?.toDate) {
-            const postDate = post.createdAt.toDate();
-            return postDate >= startDate;
-          }
-          return false;
-        });
+        startDate.setHours(0, 0, 0, 0); // Start of day
+        
+        q = query(
+          postsRef,
+          where("departmentTag", "==", dept),
+          where("createdAt", ">=", Timestamp.fromDate(startDate))
+        );
+      } else {
+        q = query(postsRef, where("departmentTag", "==", dept));
       }
+
+      const snapshot = await getDocs(q);
+      const posts = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter((post) => !post.deleted); // Exclude deleted posts
 
       // Calculate statistics
       const total = posts.length;
@@ -501,30 +501,38 @@ export default function DashboardAnalytics() {
             >
               Status Distribution
             </Heading>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={stats.byStatus}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) =>
-                    percent > 0
-                      ? `${name}: ${(percent * 100).toFixed(0)}%`
-                      : null
-                  }
-                  outerRadius={90}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {stats.byStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
-              </PieChart>
-            </ResponsiveContainer>
+            {stats.total === 0 ? (
+              <VStack justify="center" align="center" h={300}>
+                <Text fontSize="4xl" opacity={0.3}>📊</Text>
+                <Text color="gray.500" fontWeight="500">No data available</Text>
+                <Text color="gray.400" fontSize="sm">Issues will appear here once reported</Text>
+              </VStack>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={stats.byStatus}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) =>
+                      percent > 0
+                        ? `${name}: ${(percent * 100).toFixed(0)}%`
+                        : null
+                    }
+                    outerRadius={90}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {stats.byStatus.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </Box>
 
           {/* Status Breakdown Bar Chart */}
@@ -547,56 +555,70 @@ export default function DashboardAnalytics() {
             >
               Status Breakdown
             </Heading>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stats.byStatus}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 12 }}
-                  angle={-15}
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "8px",
-                    border: "1px solid #e0e0e0",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                  }}
-                />
-                <Legend iconType="circle" />
-                <Bar
-                  dataKey="value"
-                  fill="#667eea"
-                  radius={[8, 8, 0, 0]}
-                  name="Count"
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            {stats.total === 0 ? (
+              <VStack justify="center" align="center" h={300}>
+                <Text fontSize="4xl" opacity={0.3}>📈</Text>
+                <Text color="gray.500" fontWeight="500">No data available</Text>
+                <Text color="gray.400" fontSize="sm">Statistics will appear here once reported</Text>
+              </VStack>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={stats.byStatus}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 12 }}
+                    angle={-15}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "8px",
+                      border: "1px solid #e0e0e0",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                  <Legend iconType="circle" />
+                  <Bar
+                    dataKey="value"
+                    fill="#667eea"
+                    radius={[8, 8, 0, 0]}
+                    name="Count"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </Box>
 
           {/* Performance Metrics - Stacked Area Chart */}
-          {stats.byMonth.length > 0 && (
-            <Box
-              p={{ base: 4, md: 6 }}
-              bg={bgColor}
-              borderRadius="xl"
-              borderWidth="1px"
-              borderColor={borderColor}
-              shadow="lg"
-              transition="all 0.3s"
-              _hover={{ shadow: "xl", transform: "translateY(-4px)" }}
+          <Box
+            p={{ base: 4, md: 6 }}
+            bg={bgColor}
+            borderRadius="xl"
+            borderWidth="1px"
+            borderColor={borderColor}
+            shadow="lg"
+            transition="all 0.3s"
+            _hover={{ shadow: "xl", transform: "translateY(-4px)" }}
+          >
+            <Heading
+              size={{ base: "sm", md: "md" }}
+              mb={4}
+              bgGradient="linear(to-r, green.600, teal.600)"
+              bgClip="text"
+              fontWeight="bold"
             >
-              <Heading
-                size={{ base: "sm", md: "md" }}
-                mb={4}
-                bgGradient="linear(to-r, green.600, teal.600)"
-                bgClip="text"
-                fontWeight="bold"
-              >
-                Performance Overview
-              </Heading>
+              Performance Overview
+            </Heading>
+            {stats.byMonth.length === 0 ? (
+              <VStack justify="center" align="center" h={300}>
+                <Text fontSize="4xl" opacity={0.3}>📊</Text>
+                <Text color="gray.500" fontWeight="500">No trend data available</Text>
+                <Text color="gray.400" fontSize="sm">Data will appear for the selected time range</Text>
+              </VStack>
+            ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={stats.byMonth}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
@@ -636,11 +658,94 @@ export default function DashboardAnalytics() {
                   />
                 </BarChart>
               </ResponsiveContainer>
-            </Box>
-          )}
+            ) : null}
+          </Box>
 
           {/* Reporting Trend Line Chart */}
-          {stats.byMonth.length > 0 && (
+          <Box
+            p={{ base: 4, md: 6 }}
+            bg={bgColor}
+            borderRadius="xl"
+            borderWidth="1px"
+            borderColor={borderColor}
+            shadow="lg"
+            transition="all 0.3s"
+            _hover={{ shadow: "xl", transform: "translateY(-4px)" }}
+          >
+            <Heading
+              size={{ base: "sm", md: "md" }}
+              mb={4}
+              bgGradient="linear(to-r, orange.600, red.600)"
+              bgClip="text"
+              fontWeight="bold"
+            >
+              Reporting Trend
+            </Heading>
+            {stats.byMonth.length === 0 ? (
+              <VStack justify="center" align="center" h={300}>
+                <Text fontSize="4xl" opacity={0.3}>📉</Text>
+                <Text color="gray.500" fontWeight="500">No trend data available</Text>
+                <Text color="gray.400" fontSize="sm">Trends will appear for the selected time range</Text>
+              </VStack>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={stats.byMonth}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis
+                    dataKey="period"
+                    tick={{ fontSize: 11 }}
+                    angle={-15}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "8px",
+                      border: "1px solid #e0e0e0",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                  <Legend iconType="circle" />
+                  <Line
+                    type="monotone"
+                    dataKey="pending"
+                    stroke="#f093fb"
+                    strokeWidth={3}
+                    name="Pending"
+                    dot={{ r: 5 }}
+                    activeDot={{ r: 7 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="in_progress"
+                    stroke="#fa709a"
+                    strokeWidth={3}
+                    name="In Progress"
+                    dot={{ r: 5 }}
+                    activeDot={{ r: 7 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="resolved"
+                    stroke="#30cfd0"
+                    strokeWidth={3}
+                    name="Resolved"
+                    dot={{ r: 5 }}
+                    activeDot={{ r: 7 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="rejected"
+                    stroke="#ff0844"
+                    strokeWidth={3}
+                    name="Rejected"
+                    dot={{ r: 5 }}
+                    activeDot={{ r: 7 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
             <Box
               p={{ base: 4, md: 6 }}
               bg={bgColor}
@@ -717,8 +822,8 @@ export default function DashboardAnalytics() {
                   />
                 </LineChart>
               </ResponsiveContainer>
-            </Box>
-          )}
+            )}
+          </Box>
         </SimpleGrid>
       </VStack>
     </Container>

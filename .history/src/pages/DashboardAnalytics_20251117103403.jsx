@@ -92,7 +92,7 @@ export default function DashboardAnalytics() {
         const startDate = new Date();
         startDate.setDate(now.getDate() - daysAgo);
         startDate.setHours(0, 0, 0, 0);
-
+        
         posts = posts.filter((post) => {
           if (post.createdAt?.toDate) {
             const postDate = post.createdAt.toDate();

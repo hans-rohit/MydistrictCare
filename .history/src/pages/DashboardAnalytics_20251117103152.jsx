@@ -75,32 +75,27 @@ export default function DashboardAnalytics() {
     setLoading(true);
     try {
       const postsRef = collection(db, "posts");
-      const q = query(postsRef, where("departmentTag", "==", dept));
+      let q = query(postsRef, where("departmentTag", "==", dept));
+
+      // Apply time range filter
+      if (timeRange !== "all") {
+        const now = new Date();
+        const daysAgo = timeRange === "7days" ? 7 : 30;
+        const startDate = new Date(now.setDate(now.getDate() - daysAgo));
+        q = query(
+          postsRef,
+          where("departmentTag", "==", dept),
+          where("createdAt", ">=", startDate)
+        );
+      }
 
       const snapshot = await getDocs(q);
-      let posts = snapshot.docs
+      const posts = snapshot.docs
         .map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }))
         .filter((post) => !post.deleted); // Exclude deleted posts
-
-      // Apply time range filter in JavaScript
-      if (timeRange !== "all") {
-        const now = new Date();
-        const daysAgo = timeRange === "7days" ? 7 : 30;
-        const startDate = new Date();
-        startDate.setDate(now.getDate() - daysAgo);
-        startDate.setHours(0, 0, 0, 0);
-
-        posts = posts.filter((post) => {
-          if (post.createdAt?.toDate) {
-            const postDate = post.createdAt.toDate();
-            return postDate >= startDate;
-          }
-          return false;
-        });
-      }
 
       // Calculate statistics
       const total = posts.length;
