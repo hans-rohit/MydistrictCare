@@ -102,7 +102,9 @@ export default function Home({ showIntro = true }) {
 
         // Filter out deleted posts for non-super-admin
         if (!isSuperAdmin) {
-          posts = posts.filter((p) => !p.deleted && p.status !== "deleted");
+          posts = posts.filter(
+            (p) => !p.deleted && p.status !== "deleted"
+          );
         }
 
         setTotalDocs(posts.length);
@@ -755,14 +757,14 @@ export default function Home({ showIntro = true }) {
             </SimpleGrid>
           </VStack>
 
-          <Divider mb={4} />
+          <Divider mb={8} />
         </>
       )}
 
       {/* Issues Map */}
       <IssuesMap posts={allPosts} />
 
-      <HStack justify="space-between" mb={6} align="center" wrap="wrap" gap={2}>
+      <HStack justify="space-between" mb={5} align="center" wrap="wrap" gap={2}>
         <Heading size="md">Recent Reports</Heading>
       </HStack>
 

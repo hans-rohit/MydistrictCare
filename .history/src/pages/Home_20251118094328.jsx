@@ -102,7 +102,9 @@ export default function Home({ showIntro = true }) {
 
         // Filter out deleted posts for non-super-admin
         if (!isSuperAdmin) {
-          posts = posts.filter((p) => !p.deleted && p.status !== "deleted");
+          posts = posts.filter(
+            (p) => !p.deleted && p.status !== "deleted"
+          );
         }
 
         setTotalDocs(posts.length);

@@ -46,7 +46,6 @@ export default function Home({ showIntro = true }) {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const { user, profile, loading } = useAuth();
   const [posts, setPosts] = useState([]);
-  const [allPosts, setAllPosts] = useState([]); // For map display
   const [error, setError] = useState(null);
   const [totalDocs, setTotalDocs] = useState(0);
   const [counts, setCounts] = useState({
@@ -98,15 +97,16 @@ export default function Home({ showIntro = true }) {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        let posts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        let allPosts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
         // Filter out deleted posts for non-super-admin
         if (!isSuperAdmin) {
-          posts = posts.filter((p) => !p.deleted && p.status !== "deleted");
+          allPosts = allPosts.filter(
+            (p) => !p.deleted && p.status !== "deleted"
+          );
         }
 
-        setTotalDocs(posts.length);
-        setAllPosts(posts); // Store all posts for map
+        setTotalDocs(allPosts.length);
         // Note: Don't set counts here - they're calculated in loadInitial/fetchSearch
         // to respect active filters
         setError(null);
@@ -755,16 +755,16 @@ export default function Home({ showIntro = true }) {
             </SimpleGrid>
           </VStack>
 
-          <Divider mb={4} />
+          <Divider mb={8} />
         </>
       )}
 
-      {/* Issues Map */}
-      <IssuesMap posts={allPosts} />
-
-      <HStack justify="space-between" mb={6} align="center" wrap="wrap" gap={2}>
+      <HStack justify="space-between" mb={5} align="center" wrap="wrap" gap={2}>
         <Heading size="md">Recent Reports</Heading>
       </HStack>
+
+      {/* Issues Map */}
+      <IssuesMap posts={isSearchingActive ? filteredPosts : posts} />
 
       {/* Stats Dashboard */}
       <Box
