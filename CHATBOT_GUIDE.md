@@ -1,0 +1,176 @@
+# AI Chatbot Integration Guide
+
+## Overview
+
+The District Care AI Chatbot uses Google's Gemini 2.0 Flash model to answer questions about civic issues based on real-time data from your platform.
+
+## Setup Instructions
+
+### 1. Get Your Gemini API Key
+
+1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click "Create API Key"
+4. Copy the generated API key
+
+### 2. Configure Environment Variables
+
+1. Create a `.env` file in the root directory (if not already created)
+2. Add your API key:
+   ```
+   VITE_GEMINI_API_KEY=your_api_key_here
+   ```
+3. **Important:** Make sure `.env` is in your `.gitignore` to keep your API key secure
+
+### 3. Restart Development Server
+
+After adding the API key, restart your Vite dev server:
+
+```bash
+npm run dev
+```
+
+## Features
+
+### UI Components
+
+- **Floating Button:** Fixed circular button at bottom-right corner
+- **Chat Window:** Medium-sized rounded rectangle (400px x 600px)
+- **Responsive:** Adapts to mobile screens
+- **Smooth Animations:** Hover effects and transitions
+
+### AI Capabilities
+
+The chatbot can answer questions about:
+
+- ✅ Electricity issues and statistics
+- ✅ Water supply problems
+- ✅ Sewage/drainage issues
+- ✅ Road maintenance and infrastructure
+- ✅ Overall statistics (total issues, by department, by status)
+- ✅ Recent issues reported
+
+### Context-Aware Responses
+
+The chatbot uses real-time data from your Firestore database:
+
+- Total number of issues
+- Issues by department (Electricity, Water, Sewage, Road)
+- Issues by status (pending, in-progress, resolved, rejected)
+- Recent issues with descriptions
+
+## File Structure
+
+```
+src/
+├── components/
+│   └── Chatbot.jsx          # Main chatbot UI component
+├── lib/
+│   └── gemini.js            # Gemini AI service & context builder
+└── App.jsx                  # Chatbot integrated here
+```
+
+## Usage
+
+### For Users
+
+1. Look for the blue circular chat icon at the bottom-right
+2. Click to open the chat window
+3. Ask questions like:
+   - "How many electricity issues are there?"
+   - "What's the status of water supply complaints?"
+   - "Show me recent road issues"
+   - "How many pending issues do we have?"
+
+### For Developers
+
+#### Customizing the System Prompt
+
+Edit `src/lib/gemini.js` to modify how the AI responds:
+
+```javascript
+const systemPrompt = `You are a helpful assistant for District Care...`;
+```
+
+#### Adjusting Context Data
+
+Modify the `createContextFromPosts()` function to include more or different data:
+
+```javascript
+const createContextFromPosts = (posts) => {
+  // Add custom statistics or filters here
+};
+```
+
+#### Styling the Chat UI
+
+The chatbot uses Chakra UI components. Customize in `src/components/Chatbot.jsx`:
+
+- Change colors: `colorScheme="blue"`
+- Adjust size: `w={{ base: "90vw", sm: "400px" }}`
+- Modify position: `bottom="20px" right="20px"`
+
+## Best Practices
+
+### API Key Security
+
+- ✅ Never commit `.env` to version control
+- ✅ Use environment variables for API keys
+- ✅ Regenerate keys if exposed
+
+### Rate Limiting
+
+Gemini API has rate limits:
+
+- Free tier: 15 requests per minute
+- Consider adding request throttling for production
+
+### Error Handling
+
+The chatbot handles errors gracefully:
+
+- Invalid API key → User-friendly error message
+- Network issues → Retry mechanism
+- Empty responses → Fallback message
+
+## Troubleshooting
+
+### Chatbot Not Responding
+
+1. Check browser console for errors
+2. Verify API key in `.env` file
+3. Ensure dev server was restarted after adding `.env`
+4. Check network tab for API call failures
+
+### "API key not configured" Error
+
+- Make sure your `.env` file exists
+- Verify the key name is exactly `VITE_GEMINI_API_KEY`
+- Restart the dev server
+
+### Slow Responses
+
+- Gemini Flash is designed to be fast, but response time depends on:
+  - Internet connection speed
+  - Amount of context data
+  - API server load
+
+## Future Enhancements
+
+Potential improvements:
+
+- 🔄 Chat history persistence (localStorage)
+- 📊 Chart generation in responses
+- 🔔 Proactive notifications for new issues
+- 🌐 Multi-language support
+- 📝 Suggested questions/quick replies
+- 🎯 Issue filtering and deep-dive queries
+
+## API Costs
+
+Gemini 2.0 Flash pricing (as of 2025):
+
+- Free tier: 15 RPM (requests per minute)
+- Paid tier: Check [Google AI Pricing](https://ai.google.dev/pricing)
+
+For a civic platform, the free tier should be sufficient for moderate usage.
