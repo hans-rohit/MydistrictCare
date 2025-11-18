@@ -73,41 +73,17 @@ export default function IssuesMap({ posts }) {
     console.log("Total posts received:", posts.length);
     console.log("Posts with valid location:", postsWithLocation.length);
     console.log("Posts by status:", {
-      pending: postsWithLocation.filter((p) => p.status === "pending").length,
-      in_progress: postsWithLocation.filter((p) => p.status === "in_progress")
-        .length,
-      resolved: postsWithLocation.filter((p) => p.status === "resolved").length,
-      rejected: postsWithLocation.filter((p) => p.status === "rejected").length,
+      pending: postsWithLocation.filter(p => p.status === 'pending').length,
+      in_progress: postsWithLocation.filter(p => p.status === 'in_progress').length,
+      resolved: postsWithLocation.filter(p => p.status === 'resolved').length,
+      rejected: postsWithLocation.filter(p => p.status === 'rejected').length,
     });
 
-    // Add small random offset to overlapping markers
-    const postsWithOffset = postsWithLocation.map((post, index) => {
-      // Find if there are other posts with same coordinates
-      const duplicates = postsWithLocation.filter(
-        (p, i) =>
-          i < index &&
-          Math.abs(p.lat - post.lat) < 0.0001 &&
-          Math.abs(p.lng - post.lng) < 0.0001
-      );
-
-      if (duplicates.length > 0) {
-        // Add small offset in a circular pattern
-        const angle = duplicates.length * 60 * (Math.PI / 180);
-        const offsetDistance = 0.0003; // ~30 meters
-        return {
-          ...post,
-          lat: post.lat + offsetDistance * Math.cos(angle),
-          lng: post.lng + offsetDistance * Math.sin(angle),
-        };
-      }
-      return post;
-    });
-
-    setValidPosts(postsWithOffset);
+    setValidPosts(postsWithLocation);
 
     // Set center to first valid post or keep default
-    if (postsWithOffset.length > 0) {
-      const firstPost = postsWithOffset[0];
+    if (postsWithLocation.length > 0) {
+      const firstPost = postsWithLocation[0];
       setCenter([firstPost.lat, firstPost.lng]);
     }
   }, [posts]);

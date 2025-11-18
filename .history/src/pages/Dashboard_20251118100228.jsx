@@ -27,13 +27,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import {
-  collection,
-  query,
-  getDocs,
-  where,
-  onSnapshot,
-} from "firebase/firestore";
+import { collection, query, getDocs, where, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import IssuesMap from "../components/IssuesMap";
