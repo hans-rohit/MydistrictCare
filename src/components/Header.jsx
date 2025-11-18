@@ -138,7 +138,7 @@ export default function Header() {
                     ? "linear(to-r, purple.500, pink.500)"
                     : profile?.role === "dept"
                     ? "linear(to-r, orange.500, red.500)"
-                    : "linear(to-r, green.500, teal.500)"
+                    : "linear(to-r, #8B4C25, #B87333)"
                 }
                 color="white"
                 textTransform="capitalize"
@@ -226,7 +226,7 @@ export default function Header() {
                     ? "linear(to-r, purple.500, pink.500)"
                     : profile?.role === "dept"
                     ? "linear(to-r, orange.500, red.500)"
-                    : "linear(to-r, green.500, teal.500)"
+                    : "linear(to-r, #8B4C25, #B87333)"
                 }
                 color="white"
                 textTransform="capitalize"
