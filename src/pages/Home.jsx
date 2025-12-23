@@ -36,7 +36,12 @@ import {
 } from "@chakra-ui/react";
 import { SearchIcon } from "@chakra-ui/icons";
 import { keyframes } from "@emotion/react";
-import { FaHandsHelping, FaMapMarkerAlt, FaRegLightbulb } from "react-icons/fa";
+import {
+  FaHandsHelping,
+  FaMapMarkerAlt,
+  FaRegLightbulb,
+  FaArrowRight,
+} from "react-icons/fa";
 import PostCard from "../components/PostCard";
 import IssuesMap from "../components/IssuesMap";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -1236,41 +1241,69 @@ export default function Home({ showIntro = true }) {
         )
       ) : (
         <>
-          {/* Infinite scroll grid */}
+          {/* Posts grid */}
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-            {(isSearchingActive ? filteredPosts : posts).map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                showAsYou={user && post?.createdBy?.uid === user.uid}
-              />
-            ))}
+            {(isSearchingActive ? filteredPosts : posts)
+              .slice(0, showIntro && !isSearchingActive ? 6 : undefined)
+              .map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  showAsYou={user && post?.createdBy?.uid === user.uid}
+                />
+              ))}
           </SimpleGrid>
 
-          {/* Sentinel for infinite scroll */}
-          <Box ref={loadMoreRef} textAlign="center" py={4} color="gray.600">
-            {isSearchingActive ? (
-              searchIsFetchingMore ? (
+          {/* Show More button - only on home page, after posts, before footer */}
+          {showIntro && !isSearchingActive && posts.length > 6 && (
+            <Box textAlign="center" mt={8} mb={6}>
+              <Button
+                colorScheme="blue"
+                size="lg"
+                rightIcon={<FaArrowRight />}
+                onClick={() => navigate("/feed")}
+                px={8}
+                py={6}
+                fontSize="md"
+                fontWeight="semibold"
+                boxShadow="md"
+                _hover={{
+                  transform: "translateY(-2px)",
+                  boxShadow: "lg",
+                }}
+                transition="all 0.2s"
+              >
+                Show More Posts
+              </Button>
+            </Box>
+          )}
+
+          {/* Sentinel for infinite scroll - only on feed page */}
+          {!showIntro && (
+            <Box ref={loadMoreRef} textAlign="center" py={4} color="gray.600">
+              {isSearchingActive ? (
+                searchIsFetchingMore ? (
+                  <HStack justify="center">
+                    <Spinner size="sm" />
+                    <Text>Loading more...</Text>
+                  </HStack>
+                ) : searchHasMore ? (
+                  <Text>Scroll to load more</Text>
+                ) : (
+                  <Text>No more reports</Text>
+                )
+              ) : isFetchingMore ? (
                 <HStack justify="center">
                   <Spinner size="sm" />
                   <Text>Loading more...</Text>
                 </HStack>
-              ) : searchHasMore ? (
+              ) : hasMore ? (
                 <Text>Scroll to load more</Text>
               ) : (
                 <Text>No more reports</Text>
-              )
-            ) : isFetchingMore ? (
-              <HStack justify="center">
-                <Spinner size="sm" />
-                <Text>Loading more...</Text>
-              </HStack>
-            ) : hasMore ? (
-              <Text>Scroll to load more</Text>
-            ) : (
-              <Text>No more reports</Text>
-            )}
-          </Box>
+              )}
+            </Box>
+          )}
         </>
       )}
     </Container>
