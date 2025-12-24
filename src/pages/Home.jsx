@@ -47,6 +47,47 @@ import IssuesMap from "../components/IssuesMap";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+// Pre-defined issue titles by department (same as CreatePost)
+const ISSUE_TITLES = {
+  Electricity: [
+    "Power Outage",
+    "Faulty Streetlight",
+    "Damaged Transformer",
+    "Electric Pole Issue",
+    "Wire Damage",
+    "Meter Problem",
+    "Other Electricity Issue",
+  ],
+  Water: [
+    "No Water Supply",
+    "Low Water Pressure",
+    "Pipe Leakage",
+    "Water Contamination",
+    "Broken Valve",
+    "Water Wastage",
+    "Other Water Issue",
+  ],
+  Sewage: [
+    "Blocked Drain",
+    "Sewage Overflow",
+    "Manhole Issue",
+    "Foul Smell",
+    "Drainage Problem",
+    "Sanitation Issue",
+    "Other Sewage Issue",
+  ],
+  Road: [
+    "Pothole",
+    "Road Damage",
+    "Traffic Congestion",
+    "Accident",
+    "Missing Sign",
+    "Street Flooding",
+    "Broken Footpath",
+    "Other Road Issue",
+  ],
+};
+
 export default function Home({ showIntro = true }) {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const { user, profile, loading } = useAuth();
@@ -1082,127 +1123,137 @@ export default function Home({ showIntro = true }) {
         )}
       </Box>
 
-      {/* Search controls for Home feed */}
-      <VStack align="stretch" spacing={2} mb={4}>
-        {/* Search bar - full width on mobile, on separate line */}
-        <InputGroup w="100%">
-          <InputLeftElement pointerEvents="none">
-            <SearchIcon color="gray.400" />
-          </InputLeftElement>
-          <Input
-            placeholder="Search reports by title"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            bg="white"
-            pl={10}
-            size="md"
-          />
-        </InputGroup>
-        {/* All filters on one line for desktop, wrap on mobile */}
-        <HStack
-          spacing={3}
-          align="center"
-          wrap={{ base: "wrap", md: "wrap", lg: "nowrap" }}
-          w="100%"
-        >
-          <Select
-            placeholder="Department (all)"
-            value={deptFilter}
-            onChange={(e) => setDeptFilter(e.target.value)}
-            bg="white"
-            size="md"
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
-            minW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
-            maxW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
-            borderRadius="md"
-          >
-            <option value="Electricity">Electricity</option>
-            <option value="Water">Water</option>
-            <option value="Sewage">Sewage</option>
-            <option value="Road">Road</option>
-          </Select>
-          <Select
-            placeholder="Status (all)"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            bg="white"
-            size="md"
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
-            minW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
-            maxW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
-            borderRadius="md"
-          >
-            <option value="pending">Pending</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
-            <option value="rejected">Rejected</option>
-            {isSuperAdmin && <option value="deleted">Deleted</option>}
-          </Select>
+      {/* Search controls for feed page only */}
+      {!showIntro && (
+        <VStack align="stretch" spacing={2} mb={4}>
+          {/* All filters on one line for desktop, wrap on mobile */}
           <HStack
-            spacing={2}
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+            spacing={3}
+            align="center"
+            wrap={{ base: "wrap", md: "wrap", lg: "nowrap" }}
+            w="100%"
           >
-            <Text fontSize="sm" fontWeight="medium" whiteSpace="nowrap">
-              From:
-            </Text>
-            <Input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
+            <Select
+              placeholder="Department (all)"
+              value={deptFilter}
+              onChange={(e) => {
+                setDeptFilter(e.target.value);
+                setSearchText(""); // Reset title when department changes
+              }}
               bg="white"
               size="md"
-              minW={{ base: "auto", md: "165px", lg: "165px" }}
-              maxW={{ base: "auto", md: "165px", lg: "165px" }}
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+              minW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
+              maxW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
               borderRadius="md"
-            />
-          </HStack>
-          <HStack
-            spacing={2}
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
-          >
-            <Text fontSize="sm" fontWeight="medium" whiteSpace="nowrap">
-              To:
-            </Text>
-            <Input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
+            >
+              <option value="Electricity">Electricity</option>
+              <option value="Water">Water</option>
+              <option value="Sewage">Sewage</option>
+              <option value="Road">Road</option>
+            </Select>
+            <Select
+              placeholder="Issue Type (all)"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
               bg="white"
               size="md"
-              minW={{ base: "auto", md: "165px", lg: "165px" }}
-              maxW={{ base: "auto", md: "165px", lg: "165px" }}
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+              minW={{ base: "calc(50% - 6px)", md: "180px", lg: "180px" }}
+              maxW={{ base: "calc(50% - 6px)", md: "180px", lg: "180px" }}
               borderRadius="md"
-            />
+              isDisabled={!deptFilter}
+            >
+              {deptFilter &&
+                ISSUE_TITLES[deptFilter]?.map((title) => (
+                  <option key={title} value={title}>
+                    {title}
+                  </option>
+                ))}
+            </Select>
+            <Select
+              placeholder="Status (all)"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              bg="white"
+              size="md"
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+              minW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
+              maxW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
+              borderRadius="md"
+            >
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+              <option value="rejected">Rejected</option>
+              {isSuperAdmin && <option value="deleted">Deleted</option>}
+            </Select>
+            <HStack
+              spacing={2}
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+            >
+              <Text fontSize="sm" fontWeight="medium" whiteSpace="nowrap">
+                From:
+              </Text>
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                bg="white"
+                size="md"
+                minW={{ base: "auto", md: "165px", lg: "165px" }}
+                maxW={{ base: "auto", md: "165px", lg: "165px" }}
+                borderRadius="md"
+              />
+            </HStack>
+            <HStack
+              spacing={2}
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+            >
+              <Text fontSize="sm" fontWeight="medium" whiteSpace="nowrap">
+                To:
+              </Text>
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                bg="white"
+                size="md"
+                minW={{ base: "auto", md: "165px", lg: "165px" }}
+                maxW={{ base: "auto", md: "165px", lg: "165px" }}
+                borderRadius="md"
+              />
+            </HStack>
+            {/* Buttons - full width on mobile, auto on desktop */}
+            <Button
+              colorScheme="blue"
+              onClick={handleApplySearch}
+              isDisabled={
+                !hasTyped &&
+                !hasStatusSelected &&
+                !deptFilter &&
+                !fromDate &&
+                !toDate
+              }
+              size="md"
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+              minW={{ base: "calc(50% - 6px)", md: "110px", lg: "100px" }}
+            >
+              Search
+            </Button>
+            <Button
+              onClick={handleClearSearch}
+              isDisabled={!isSearchingActive}
+              colorScheme="red"
+              size="md"
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+              minW={{ base: "calc(50% - 6px)", md: "110px", lg: "100px" }}
+            >
+              Clear filter
+            </Button>
           </HStack>
-          {/* Buttons - full width on mobile, auto on desktop */}
-          <Button
-            colorScheme="blue"
-            onClick={handleApplySearch}
-            isDisabled={
-              !hasTyped &&
-              !hasStatusSelected &&
-              !deptFilter &&
-              !fromDate &&
-              !toDate
-            }
-            size="md"
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
-            minW={{ base: "calc(50% - 6px)", md: "110px", lg: "100px" }}
-          >
-            Search
-          </Button>
-          <Button
-            onClick={handleClearSearch}
-            isDisabled={!isSearchingActive}
-            colorScheme="red"
-            size="md"
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
-            minW={{ base: "calc(50% - 6px)", md: "110px", lg: "100px" }}
-          >
-            Clear filter
-          </Button>
-        </HStack>
-      </VStack>
+        </VStack>
+      )}
 
       {error && (
         <Alert status="error" mb={4}>

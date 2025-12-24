@@ -49,6 +49,47 @@ import {
   googleMapsLink,
 } from "../lib/location";
 
+// Pre-defined issue titles by department (same as CreatePost)
+const ISSUE_TITLES = {
+  Electricity: [
+    "Power Outage",
+    "Faulty Streetlight",
+    "Damaged Transformer",
+    "Electric Pole Issue",
+    "Wire Damage",
+    "Meter Problem",
+    "Other Electricity Issue",
+  ],
+  Water: [
+    "No Water Supply",
+    "Low Water Pressure",
+    "Pipe Leakage",
+    "Water Contamination",
+    "Broken Valve",
+    "Water Wastage",
+    "Other Water Issue",
+  ],
+  Sewage: [
+    "Blocked Drain",
+    "Sewage Overflow",
+    "Manhole Issue",
+    "Foul Smell",
+    "Drainage Problem",
+    "Sanitation Issue",
+    "Other Sewage Issue",
+  ],
+  Road: [
+    "Pothole",
+    "Road Damage",
+    "Traffic Congestion",
+    "Accident",
+    "Missing Sign",
+    "Street Flooding",
+    "Broken Footpath",
+    "Other Road Issue",
+  ],
+};
+
 export default function DashboardDept({ fixedDept }) {
   const params = useParams();
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
@@ -1028,20 +1069,6 @@ export default function DashboardDept({ fixedDept }) {
 
       {/* Search controls for recent reports */}
       <VStack align="stretch" spacing={2} mb={4}>
-        {/* Search bar - full width on mobile, on separate line */}
-        <InputGroup w="100%">
-          <InputLeftElement pointerEvents="none">
-            <SearchIcon color="gray.400" />
-          </InputLeftElement>
-          <Input
-            placeholder="Search reports by title"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            bg="white"
-            pl={10}
-            size="md"
-          />
-        </InputGroup>
         {/* All filters on one line for desktop, wrap on mobile */}
         <HStack
           spacing={3}
@@ -1049,6 +1076,24 @@ export default function DashboardDept({ fixedDept }) {
           wrap={{ base: "wrap", md: "wrap", lg: "nowrap" }}
           w="100%"
         >
+          <Select
+            placeholder="Issue Type (all)"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            bg="white"
+            size="md"
+            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+            minW={{ base: "calc(50% - 6px)", md: "180px", lg: "180px" }}
+            maxW={{ base: "calc(50% - 6px)", md: "180px", lg: "180px" }}
+            borderRadius="md"
+          >
+            {dept &&
+              ISSUE_TITLES[dept]?.map((title) => (
+                <option key={title} value={title}>
+                  {title}
+                </option>
+              ))}
+          </Select>
           <Select
             placeholder="Status (all)"
             value={statusFilter}
