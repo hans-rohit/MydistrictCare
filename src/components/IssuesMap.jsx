@@ -42,7 +42,9 @@ const createCustomIcon = (color) => {
 const statusIcons = {
   pending: createCustomIcon("#d946ef"), // Darker purple/magenta
   in_progress: createCustomIcon("#f59e0b"), // Darker orange
-  resolved: createCustomIcon("#10b981"), // Darker green
+  resolved_pending_verification: createCustomIcon("#eab308"), // Darker yellow
+  resolved_verified: createCustomIcon("#10b981"), // Darker green
+  resolved: createCustomIcon("#10b981"), // Darker green (fallback)
   rejected: createCustomIcon("#dc2626"), // Darker red
 };
 
@@ -76,6 +78,12 @@ export default function IssuesMap({ posts }) {
       pending: postsWithLocation.filter((p) => p.status === "pending").length,
       in_progress: postsWithLocation.filter((p) => p.status === "in_progress")
         .length,
+      resolved_pending_verification: postsWithLocation.filter(
+        (p) => p.status === "resolved_pending_verification"
+      ).length,
+      resolved_verified: postsWithLocation.filter(
+        (p) => p.status === "resolved_verified"
+      ).length,
       resolved: postsWithLocation.filter((p) => p.status === "resolved").length,
       rejected: postsWithLocation.filter((p) => p.status === "rejected").length,
     });
@@ -118,6 +126,8 @@ export default function IssuesMap({ posts }) {
     const colors = {
       pending: "purple",
       in_progress: "orange",
+      resolved_pending_verification: "yellow",
+      resolved_verified: "green",
       resolved: "green",
       rejected: "red",
     };
@@ -177,8 +187,12 @@ export default function IssuesMap({ posts }) {
               <Text fontSize="xs">In Progress</Text>
             </HStack>
             <HStack spacing={1}>
+              <Box w={3} h={3} bg="#eab308" borderRadius="full" />
+              <Text fontSize="xs">Pending Verification</Text>
+            </HStack>
+            <HStack spacing={1}>
               <Box w={3} h={3} bg="#10b981" borderRadius="full" />
-              <Text fontSize="xs">Resolved</Text>
+              <Text fontSize="xs">Verified & Closed</Text>
             </HStack>
             <HStack spacing={1}>
               <Box w={3} h={3} bg="#dc2626" borderRadius="full" />

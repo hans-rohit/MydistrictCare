@@ -99,7 +99,8 @@ export default function Home({ showIntro = true }) {
     total: 0,
     pending: 0,
     in_progress: 0,
-    resolved: 0,
+    resolved_pending_verification: 0,
+    resolved_verified: 0,
     rejected: 0,
   });
   const [lastVisible, setLastVisible] = useState(null);
@@ -199,7 +200,8 @@ export default function Home({ showIntro = true }) {
         total: allPosts.length,
         pending: 0,
         in_progress: 0,
-        resolved: 0,
+        resolved_pending_verification: 0,
+        resolved_verified: 0,
         rejected: 0,
         deleted: 0,
       };
@@ -471,7 +473,8 @@ export default function Home({ showIntro = true }) {
       const c = {
         total: allList.length,
         pending: 0,
-        in_progress: 0,
+        in_progr_pending_verification: 0,
+        resolved_verifiedess: 0,
         resolved: 0,
         rejected: 0,
         deleted: 0,
@@ -814,12 +817,9 @@ export default function Home({ showIntro = true }) {
 
       {/* Stats Dashboard */}
       <Box
-        display={{ base: "flex", md: "grid" }}
-        gridTemplateColumns={{
-          md: `repeat(${isSuperAdmin ? 6 : 5}, 1fr)`,
-        }}
-        overflowX={{ base: "auto", md: "visible" }}
-        gap={3}
+        display="flex"
+        overflowX="auto"
+        gap={2}
         mb={5}
         w="100%"
         css={{
@@ -839,9 +839,9 @@ export default function Home({ showIntro = true }) {
         }}
       >
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #667eea 0%, #764ba2 100%)"
           color="white"
@@ -867,9 +867,9 @@ export default function Home({ showIntro = true }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -877,7 +877,7 @@ export default function Home({ showIntro = true }) {
             Total
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
@@ -886,9 +886,9 @@ export default function Home({ showIntro = true }) {
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #f093fb 0%, #f5576c 100%)"
           color="white"
@@ -914,9 +914,9 @@ export default function Home({ showIntro = true }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -924,7 +924,7 @@ export default function Home({ showIntro = true }) {
             Pending
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
@@ -933,9 +933,9 @@ export default function Home({ showIntro = true }) {
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #fa709a 0%, #fee140 100%)"
           color="white"
@@ -961,9 +961,9 @@ export default function Home({ showIntro = true }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -971,7 +971,7 @@ export default function Home({ showIntro = true }) {
             In Progress
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
@@ -980,11 +980,11 @@ export default function Home({ showIntro = true }) {
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
-          bgGradient="linear(135deg, #30cfd0 0%, #330867 100%)"
+          bgGradient="linear(135deg, #f59e0b 0%, #d97706 100%)"
           color="white"
           textAlign="center"
           boxShadow="xl"
@@ -1008,28 +1008,75 @@ export default function Home({ showIntro = true }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
           >
-            Resolved
+            Pending Verification
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
-            {counts.resolved}
+            {counts.resolved_pending_verification}
           </Text>
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
+          borderRadius="xl"
+          bgGradient="linear(135deg, #10b981 0%, #059669 100%)"
+          color="white"
+          textAlign="center"
+          boxShadow="xl"
+          position="relative"
+          overflow="hidden"
+          transition="all 0.3s ease"
+          _hover={{
+            transform: "translateY(-4px)",
+            boxShadow: "2xl",
+          }}
+          _before={{
+            content: '""',
+            position: "absolute",
+            top: "-50%",
+            right: "-50%",
+            width: "200%",
+            height: "200%",
+            background:
+              "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
+            pointerEvents: "none",
+          }}
+        >
+          <Text
+            fontSize="2xs"
+            fontWeight="bold"
+            mb={1}
+            textTransform="uppercase"
+            letterSpacing="wide"
+            opacity={0.9}
+          >
+            Verified & Closed
+          </Text>
+          <Text
+            fontSize="2xl"
+            fontWeight="extrabold"
+            textShadow="0 2px 10px rgba(0,0,0,0.2)"
+          >
+            {counts.resolved_verified}
+          </Text>
+        </Box>
+
+        <Box
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #ff0844 0%, #ffb199 100%)"
           color="white"
@@ -1055,9 +1102,9 @@ export default function Home({ showIntro = true }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -1065,62 +1112,13 @@ export default function Home({ showIntro = true }) {
             Rejected
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
             {counts.rejected}
           </Text>
         </Box>
-
-        {isSuperAdmin && (
-          <Box
-            minW={{ base: "140px", md: "auto" }}
-            flex={{ base: "0 0 auto", md: "1" }}
-            p={5}
-            borderRadius="xl"
-            bgGradient="linear(135deg, #868f96 0%, #596164 100%)"
-            color="white"
-            textAlign="center"
-            boxShadow="xl"
-            position="relative"
-            overflow="hidden"
-            transition="all 0.3s ease"
-            _hover={{
-              transform: "translateY(-4px)",
-              boxShadow: "2xl",
-            }}
-            _before={{
-              content: '""',
-              position: "absolute",
-              top: "-50%",
-              right: "-50%",
-              width: "200%",
-              height: "200%",
-              background:
-                "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
-              pointerEvents: "none",
-            }}
-          >
-            <Text
-              fontSize="xs"
-              fontWeight="bold"
-              mb={2}
-              textTransform="uppercase"
-              letterSpacing="wide"
-              opacity={0.9}
-            >
-              Deleted
-            </Text>
-            <Text
-              fontSize="3xl"
-              fontWeight="extrabold"
-              textShadow="0 2px 10px rgba(0,0,0,0.2)"
-            >
-              {counts.deleted}
-            </Text>
-          </Box>
-        )}
       </Box>
 
       {/* Search controls for feed page only */}
@@ -1184,7 +1182,10 @@ export default function Home({ showIntro = true }) {
             >
               <option value="pending">Pending</option>
               <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
+              <option value="resolved_pending_verification">
+                Resolved - Pending Verification
+              </option>
+              <option value="resolved_verified">Verified & Closed</option>
               <option value="rejected">Rejected</option>
               {isSuperAdmin && <option value="deleted">Deleted</option>}
             </Select>

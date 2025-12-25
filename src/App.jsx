@@ -18,6 +18,7 @@ import Dashboard from "./pages/Dashboard";
 import DashboardAnalytics from "./pages/DashboardAnalytics";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
+import IssueDetail from "./pages/IssueDetail";
 import PrivateRoute from "./components/PrivateRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Chatbot from "./components/Chatbot";
@@ -91,6 +92,11 @@ export default function App() {
 
               <Route element={<PrivateRoute />}>
                 <Route path="/profile" element={<Profile />} />
+              </Route>
+
+              {/* Issue Detail - accessible by all logged-in users */}
+              <Route element={<PrivateRoute />}>
+                <Route path="/issue/:id" element={<IssueDetail />} />
               </Route>
 
               {/* Dedicated routes so dept users only see their own link; admin can access all */}

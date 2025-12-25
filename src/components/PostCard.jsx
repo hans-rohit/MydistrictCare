@@ -36,6 +36,7 @@ import { GiSewingString } from "react-icons/gi";
 import { googleMapsLink } from "../lib/location";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import {
   doc,
   getDoc,
@@ -51,9 +52,11 @@ import {
 import { db } from "../firebase";
 
 const statusColor = {
-  pending: "yellow",
+  pending: "purple",
   in_progress: "orange",
   resolved: "green",
+  resolved_pending_verification: "yellow",
+  resolved_verified: "green",
   rejected: "red",
   deleted: "gray",
 };
@@ -62,6 +65,8 @@ const statusIcon = {
   pending: TimeIcon,
   in_progress: InfoIcon,
   resolved: CheckCircleIcon,
+  resolved_pending_verification: CheckCircleIcon,
+  resolved_verified: CheckCircleIcon,
   rejected: CloseIcon,
   deleted: CloseIcon,
 };
@@ -83,6 +88,7 @@ function deptIcon(dept) {
 
 export default function PostCard({ post, onDelete, showAsYou = false }) {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const IconComp = statusIcon[post.status] || InfoIcon;
   const DeptIcon = deptIcon(post.departmentTag);
@@ -262,6 +268,19 @@ export default function PostCard({ post, onDelete, showAsYou = false }) {
   const opacity = isDeleted && isSuperAdmin ? 0.5 : 1;
   const pointerEvents = isDeleted && isSuperAdmin ? "none" : "auto";
 
+  const handleCardClick = (e) => {
+    // Don't navigate if clicking on interactive elements
+    if (
+      e.target.closest("button") ||
+      e.target.closest("a") ||
+      e.target.tagName === "BUTTON" ||
+      e.target.tagName === "A"
+    ) {
+      return;
+    }
+    navigate(`/issue/${post.id}`);
+  };
+
   return (
     <>
       <Box
@@ -273,6 +292,13 @@ export default function PostCard({ post, onDelete, showAsYou = false }) {
         position="relative"
         pointerEvents={pointerEvents}
         filter={isDeleted && isSuperAdmin ? "grayscale(50%)" : "none"}
+        cursor="pointer"
+        onClick={handleCardClick}
+        _hover={{
+          boxShadow: "md",
+          transform: "translateY(-2px)",
+        }}
+        transition="all 0.2s"
       >
         {isDeleted && isSuperAdmin && (
           <Box

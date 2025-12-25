@@ -476,17 +476,23 @@ export default function CreatePost() {
   const checkForDuplicates = async () => {
     try {
       const postsRef = collection(db, "posts");
-      const q = query(
+
+      // Check 1: Active issues (pending, in_progress, resolved_pending_verification)
+      const activeQuery = query(
         postsRef,
         where("departmentTag", "==", departmentTag),
         where("title", "==", title),
-        where("status", "in", ["pending", "in_progress"])
+        where("status", "in", [
+          "pending",
+          "in_progress",
+          "resolved_pending_verification",
+        ])
       );
 
-      const snapshot = await getDocs(q);
+      const activeSnapshot = await getDocs(activeQuery);
       const nearbyDuplicates = [];
 
-      snapshot.forEach((doc) => {
+      activeSnapshot.forEach((doc) => {
         const post = doc.data();
         const distance = calculateDistance(
           Number(lat),
@@ -501,7 +507,51 @@ export default function CreatePost() {
             id: doc.id,
             ...post,
             distance: Math.round(distance),
+            canProceed: true, // Warning only
           });
+        }
+      });
+
+      // Check 2: Recently resolved issues (within 48 hours)
+      const fortyEightHoursAgo = new Date();
+      fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
+
+      const resolvedQuery = query(
+        postsRef,
+        where("departmentTag", "==", departmentTag),
+        where("title", "==", title),
+        where("status", "==", "resolved_verified")
+      );
+
+      const resolvedSnapshot = await getDocs(resolvedQuery);
+
+      resolvedSnapshot.forEach((doc) => {
+        const post = doc.data();
+        const distance = calculateDistance(
+          Number(lat),
+          Number(lng),
+          post.lat,
+          post.lng
+        );
+
+        // Check if within 75 meters AND resolved within last 48 hours
+        if (distance <= 75) {
+          const resolutionDate =
+            post.resolutionDate?.toDate?.() || post.resolvedAt?.toDate?.();
+          if (resolutionDate && resolutionDate >= fortyEightHoursAgo) {
+            const hoursAgo = Math.round(
+              (new Date() - resolutionDate) / (1000 * 60 * 60)
+            );
+            const hoursRemaining = 48 - hoursAgo;
+            nearbyDuplicates.push({
+              id: doc.id,
+              ...post,
+              distance: Math.round(distance),
+              canProceed: false, // BLOCK submission
+              hoursRemaining,
+              resolutionDate,
+            });
+          }
         }
       });
 
@@ -566,6 +616,29 @@ export default function CreatePost() {
         actionNote: "",
         titleLower,
         titleSubstrings,
+        // Enhanced lifecycle fields
+        resolutionImage: null,
+        resolutionNote: null,
+        resolutionDate: null,
+        resolvedBy: null,
+        verificationStatus: null,
+        verificationImage: null,
+        verificationComment: null,
+        verificationDate: null,
+        verificationBy: null,
+        statusHistory: [
+          {
+            timestamp: new Date().toISOString(),
+            action: "created",
+            by: {
+              uid: user.uid,
+              name: profile?.name || "",
+              role: "public",
+            },
+            status: "pending",
+            comment: "Issue reported",
+          },
+        ],
       };
       await addDoc(collection(db, "posts"), payload);
       setTitle("");
@@ -922,48 +995,117 @@ export default function CreatePost() {
         <AlertDialogOverlay>
           <AlertDialogContent>
             <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Similar Issue Already Reported
+              {duplicates[0]?.canProceed === false
+                ? "⛔ Cannot Report Issue"
+                : "⚠️ Similar Issue Already Reported"}
             </AlertDialogHeader>
 
             <AlertDialogBody>
-              <Text mb={3}>
-                A similar <strong>{title}</strong> issue has already been
-                reported nearby and is currently{" "}
-                <strong>
-                  {duplicates[0]?.status === "pending"
-                    ? "pending"
-                    : "in progress"}
-                </strong>
-                .
-              </Text>
-              {duplicates.length > 0 && (
-                <Box bg="gray.50" p={3} borderRadius="md" mb={3}>
-                  <Text fontSize="sm" fontWeight="semibold" mb={1}>
-                    Existing Report:
+              {duplicates[0]?.canProceed === false ? (
+                <>
+                  <Text mb={3} color="red.600" fontWeight="semibold">
+                    This <strong>{title}</strong> issue was recently resolved
+                    and verified. You cannot report the same issue within 48
+                    hours of resolution.
                   </Text>
-                  <Text fontSize="sm">
-                    📍 Distance: <strong>{duplicates[0].distance}m away</strong>
+                  {duplicates.length > 0 && (
+                    <Box
+                      bg="red.50"
+                      p={3}
+                      borderRadius="md"
+                      mb={3}
+                      borderWidth="1px"
+                      borderColor="red.200"
+                    >
+                      <Text fontSize="sm" fontWeight="semibold" mb={1}>
+                        Recently Resolved Issue:
+                      </Text>
+                      <Text fontSize="sm">
+                        📍 Distance:{" "}
+                        <strong>{duplicates[0].distance}m away</strong>
+                      </Text>
+                      <Text fontSize="sm">
+                        ✅ Status: <strong>Resolved & Verified</strong>
+                      </Text>
+                      <Text fontSize="sm">
+                        🕒 Resolved:{" "}
+                        <strong>
+                          {duplicates[0].resolutionDate?.toLocaleString?.() ||
+                            "Recently"}
+                        </strong>
+                      </Text>
+                      <Text
+                        fontSize="sm"
+                        color="red.700"
+                        fontWeight="semibold"
+                        mt={2}
+                      >
+                        ⏳ Please wait{" "}
+                        <strong>{duplicates[0].hoursRemaining} hours</strong>{" "}
+                        before reporting again.
+                      </Text>
+                    </Box>
+                  )}
+                  <Text fontSize="sm" color="gray.600">
+                    This restriction prevents duplicate reports for recently
+                    fixed issues. If the problem persists after 48 hours, you
+                    can report it again.
                   </Text>
-                  <Text fontSize="sm">
-                    📋 Status: <strong>{duplicates[0].status}</strong>
+                </>
+              ) : (
+                <>
+                  <Text mb={3}>
+                    A similar <strong>{title}</strong> issue has already been
+                    reported nearby and is currently{" "}
+                    <strong>
+                      {duplicates[0]?.status === "pending"
+                        ? "pending"
+                        : duplicates[0]?.status === "in_progress"
+                        ? "in progress"
+                        : "awaiting verification"}
+                    </strong>
+                    .
                   </Text>
-                  <Text fontSize="sm" noOfLines={2}>
-                    📝 {duplicates[0].description}
+                  {duplicates.length > 0 && (
+                    <Box
+                      bg="yellow.50"
+                      p={3}
+                      borderRadius="md"
+                      mb={3}
+                      borderWidth="1px"
+                      borderColor="yellow.200"
+                    >
+                      <Text fontSize="sm" fontWeight="semibold" mb={1}>
+                        Existing Report:
+                      </Text>
+                      <Text fontSize="sm">
+                        📍 Distance:{" "}
+                        <strong>{duplicates[0].distance}m away</strong>
+                      </Text>
+                      <Text fontSize="sm">
+                        📋 Status: <strong>{duplicates[0].status}</strong>
+                      </Text>
+                      <Text fontSize="sm" noOfLines={2}>
+                        📝 {duplicates[0].description}
+                      </Text>
+                    </Box>
+                  )}
+                  <Text fontSize="sm" color="gray.600">
+                    Do you still want to report this issue?
                   </Text>
-                </Box>
+                </>
               )}
-              <Text fontSize="sm" color="gray.600">
-                Do you still want to report this issue?
-              </Text>
             </AlertDialogBody>
 
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={handleCancelSubmit}>
-                Cancel
+                {duplicates[0]?.canProceed === false ? "OK" : "Cancel"}
               </Button>
-              <Button colorScheme="blue" onClick={handleProceedAnyway} ml={3}>
-                Report Anyway
-              </Button>
+              {duplicates[0]?.canProceed !== false && (
+                <Button colorScheme="blue" onClick={handleProceedAnyway} ml={3}>
+                  Report Anyway
+                </Button>
+              )}
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialogOverlay>

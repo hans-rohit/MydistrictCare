@@ -17,6 +17,7 @@ import {
 import { HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
 import { MdHealthAndSafety } from "react-icons/md";
 import { useAuth } from "../context/AuthContext";
+import NotificationBell from "./NotificationBell";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 
@@ -210,6 +211,8 @@ export default function Header() {
           >
             {user ? (
               <HStack spacing={3}>
+                {/* Notification Bell */}
+                <NotificationBell />
                 <Badge
                   px={3}
                   py={1}

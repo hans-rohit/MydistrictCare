@@ -54,7 +54,8 @@ export default function DashboardAnalytics() {
   const statusColors = {
     pending: "#f093fb",
     in_progress: "#fa709a",
-    resolved: "#30cfd0",
+    resolved_pending_verification: "#f59e0b",
+    resolved_verified: "#10b981",
     rejected: "#ff0844",
   };
 
@@ -109,7 +110,8 @@ export default function DashboardAnalytics() {
       const statusCounts = {
         pending: 0,
         in_progress: 0,
-        resolved: 0,
+        resolved_pending_verification: 0,
+        resolved_verified: 0,
         rejected: 0,
       };
 
@@ -121,7 +123,7 @@ export default function DashboardAnalytics() {
       });
 
       const byStatus = Object.entries(statusCounts).map(([name, value]) => ({
-        name: name.replace("_", " ").toUpperCase(),
+        name: name.replace(/_/g, " ").toUpperCase(),
         value,
         count: value,
         color: statusColors[name],
@@ -160,7 +162,8 @@ export default function DashboardAnalytics() {
                 period: dayKey,
                 pending: 0,
                 in_progress: 0,
-                resolved: 0,
+                resolved_pending_verification: 0,
+                resolved_verified: 0,
                 rejected: 0,
               };
             }
@@ -184,7 +187,8 @@ export default function DashboardAnalytics() {
                 period: weekKey,
                 pending: 0,
                 in_progress: 0,
-                resolved: 0,
+                resolved_pending_verification: 0,
+                resolved_verified: 0,
                 rejected: 0,
               };
             }
@@ -209,7 +213,8 @@ export default function DashboardAnalytics() {
                 period: monthKey,
                 pending: 0,
                 in_progress: 0,
-                resolved: 0,
+                resolved_pending_verification: 0,
+                resolved_verified: 0,
                 rejected: 0,
               };
             }
@@ -223,7 +228,9 @@ export default function DashboardAnalytics() {
       }
 
       // Average Resolution Time
-      const resolvedPosts = posts.filter((p) => p.status === "resolved");
+      const resolvedPosts = posts.filter(
+        (p) => p.status === "resolved_verified"
+      );
       let avgResolutionDays = 0;
       let validCount = 0;
 
@@ -250,7 +257,9 @@ export default function DashboardAnalytics() {
         byMonth,
         responseTime: avgResolutionDays,
         avgResolutionDays,
-        resolved: statusCounts.resolved,
+        resolved_pending_verification:
+          statusCounts.resolved_pending_verification,
+        resolved_verified: statusCounts.resolved_verified,
         pending: statusCounts.pending,
         inProgress: statusCounts.in_progress,
         rejected: statusCounts.rejected,
@@ -308,7 +317,7 @@ export default function DashboardAnalytics() {
 
         {/* Summary Cards */}
         <SimpleGrid
-          columns={{ base: 1, sm: 2, lg: 4 }}
+          columns={{ base: 1, sm: 2, md: 3, lg: 6 }}
           spacing={{ base: 3, md: 6 }}
         >
           <Box
@@ -359,7 +368,7 @@ export default function DashboardAnalytics() {
             borderWidth="1px"
             borderColor={borderColor}
             shadow="lg"
-            bgGradient="linear(135deg, #30cfd0 0%, #330867 100%)"
+            bgGradient="linear(135deg, #f59e0b 0%, #d97706 100%)"
             color="white"
             position="relative"
             overflow="hidden"
@@ -382,13 +391,54 @@ export default function DashboardAnalytics() {
                 opacity={0.9}
                 fontWeight="bold"
               >
-                Resolved
+                Pending Verification
               </Text>
               <Text
                 fontSize={{ base: "3xl", md: "4xl" }}
                 fontWeight="extrabold"
               >
-                {stats.resolved || 0}
+                {stats.resolved_pending_verification || 0}
+              </Text>
+            </VStack>
+          </Box>
+
+          <Box
+            p={{ base: 4, md: 6 }}
+            bg={bgColor}
+            borderRadius="xl"
+            borderWidth="1px"
+            borderColor={borderColor}
+            shadow="lg"
+            bgGradient="linear(135deg, #10b981 0%, #059669 100%)"
+            color="white"
+            position="relative"
+            overflow="hidden"
+            _before={{
+              content: '""',
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background:
+                "radial-gradient(circle at top right, rgba(255,255,255,0.1), transparent 70%)",
+              pointerEvents: "none",
+            }}
+          >
+            <VStack align="start" spacing={2}>
+              <Text
+                fontSize={{ base: "xs", md: "sm" }}
+                textTransform="uppercase"
+                opacity={0.9}
+                fontWeight="bold"
+              >
+                Verified & Closed
+              </Text>
+              <Text
+                fontSize={{ base: "3xl", md: "4xl" }}
+                fontWeight="extrabold"
+              >
+                {stats.resolved_verified || 0}
               </Text>
             </VStack>
           </Box>
@@ -430,6 +480,47 @@ export default function DashboardAnalytics() {
                 fontWeight="extrabold"
               >
                 {stats.pending || 0}
+              </Text>
+            </VStack>
+          </Box>
+
+          <Box
+            p={{ base: 4, md: 6 }}
+            bg={bgColor}
+            borderRadius="xl"
+            borderWidth="1px"
+            borderColor={borderColor}
+            shadow="lg"
+            bgGradient="linear(135deg, #fa709a 0%, #fee140 100%)"
+            color="white"
+            position="relative"
+            overflow="hidden"
+            _before={{
+              content: '""',
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background:
+                "radial-gradient(circle at top right, rgba(255,255,255,0.1), transparent 70%)",
+              pointerEvents: "none",
+            }}
+          >
+            <VStack align="start" spacing={2}>
+              <Text
+                fontSize={{ base: "xs", md: "sm" }}
+                textTransform="uppercase"
+                opacity={0.9}
+                fontWeight="bold"
+              >
+                In Progress
+              </Text>
+              <Text
+                fontSize={{ base: "3xl", md: "4xl" }}
+                fontWeight="extrabold"
+              >
+                {stats.inProgress || 0}
               </Text>
             </VStack>
           </Box>
@@ -576,7 +667,7 @@ export default function DashboardAnalytics() {
             </ResponsiveContainer>
           </Box>
 
-          {/* Performance Metrics - Stacked Area Chart */}
+          {/* Performance Overview Bar Chart */}
           {stats.byMonth.length > 0 && (
             <Box
               p={{ base: 4, md: 6 }}
@@ -617,9 +708,15 @@ export default function DashboardAnalytics() {
                   />
                   <Legend iconType="circle" />
                   <Bar
-                    dataKey="resolved"
+                    dataKey="resolved_verified"
                     stackId="a"
-                    fill="#30cfd0"
+                    fill="#10b981"
+                    radius={[0, 0, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="resolved_pending_verification"
+                    stackId="a"
+                    fill="#f59e0b"
                     radius={[0, 0, 0, 0]}
                   />
                   <Bar
@@ -699,10 +796,19 @@ export default function DashboardAnalytics() {
                   />
                   <Line
                     type="monotone"
-                    dataKey="resolved"
-                    stroke="#30cfd0"
+                    dataKey="resolved_pending_verification"
+                    stroke="#f59e0b"
                     strokeWidth={3}
-                    name="Resolved"
+                    name="Pending Verification"
+                    dot={{ r: 5 }}
+                    activeDot={{ r: 7 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="resolved_verified"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    name="Verified & Closed"
                     dot={{ r: 5 }}
                     activeDot={{ r: 7 }}
                   />
