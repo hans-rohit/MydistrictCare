@@ -98,7 +98,7 @@ export default function Header() {
       >
         <Flex px={4} py={3} align="center" wrap="wrap" gap={2}>
           <Box flex={{ base: "1", md: "1" }}>
-            <Heading size="lg" fontWeight="bold">
+            <Heading size={{ base: "sm", md: "lg" }} fontWeight="bold">
               <Link
                 as={RouterLink}
                 to="/"
@@ -140,6 +140,11 @@ export default function Header() {
                 >
                   {profile?.role ? `${profile.role}` : "Public"}
                 </Badge>
+              )}
+              {user && (
+                <Box display={{ base: "block", md: "none" }}>
+                  <NotificationBell />
+                </Box>
               )}
               <IconButton
                 display={{ base: "flex", md: "none" }}
