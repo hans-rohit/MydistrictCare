@@ -17,6 +17,13 @@ import {
   Link,
   useToast,
   SimpleGrid,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
+  useDisclosure,
 } from "@chakra-ui/react";
 import { SearchIcon } from "@chakra-ui/icons";
 import {
@@ -32,7 +39,14 @@ import "leaflet/dist/leaflet.css";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIconUrl from "leaflet/dist/images/marker-icon.png";
 import markerShadowUrl from "leaflet/dist/images/marker-shadow.png";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { getCurrentPosition, googleMapsLink } from "../lib/location";
@@ -78,6 +92,47 @@ function MapViewUpdater({ center, zoom }) {
 
 const DEPARTMENTS = ["Electricity", "Water", "Sewage", "Road"];
 
+// Pre-defined issue titles by department
+const ISSUE_TITLES = {
+  Electricity: [
+    "Power Outage",
+    "Faulty Streetlight",
+    "Damaged Transformer",
+    "Electric Pole Issue",
+    "Wire Damage",
+    "Meter Problem",
+    "Other Electricity Issue",
+  ],
+  Water: [
+    "No Water Supply",
+    "Low Water Pressure",
+    "Pipe Leakage",
+    "Water Contamination",
+    "Broken Valve",
+    "Water Wastage",
+    "Other Water Issue",
+  ],
+  Sewage: [
+    "Blocked Drain",
+    "Sewage Overflow",
+    "Manhole Issue",
+    "Foul Smell",
+    "Drainage Problem",
+    "Sanitation Issue",
+    "Other Sewage Issue",
+  ],
+  Road: [
+    "Pothole",
+    "Road Damage",
+    "Traffic Congestion",
+    "Accident",
+    "Missing Sign",
+    "Street Flooding",
+    "Broken Footpath",
+    "Other Road Issue",
+  ],
+};
+
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 const CLOUDINARY_FOLDER =
@@ -98,6 +153,13 @@ export default function CreatePost() {
 
   const [locStatus, setLocStatus] = useState("");
   const [isLocating, setIsLocating] = useState(false);
+  const [duplicates, setDuplicates] = useState([]);
+  const {
+    isOpen: isDuplicateDialogOpen,
+    onOpen: onDuplicateDialogOpen,
+    onClose: onDuplicateDialogClose,
+  } = useDisclosure();
+  const cancelRef = useRef();
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState("");
@@ -150,9 +212,10 @@ export default function CreatePost() {
       description.trim() !== "" &&
       departmentTag !== "" &&
       lat !== "" &&
-      lng !== ""
+      lng !== "" &&
+      file !== null
     );
-  }, [title, description, departmentTag, lat, lng]);
+  }, [title, description, departmentTag, lat, lng, file]);
 
   useEffect(() => {
     getCurrentPosition()
@@ -393,10 +456,144 @@ export default function CreatePost() {
     });
   };
 
+  // Calculate distance between two coordinates in meters (Haversine formula)
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // Earth radius in meters
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in meters
+  };
+
+  // Check for duplicate reports within 75m radius
+  const checkForDuplicates = async () => {
+    try {
+      const postsRef = collection(db, "posts");
+
+      // Check 1: Active issues (pending, in_progress, resolved_pending_verification)
+      const activeQuery = query(
+        postsRef,
+        where("departmentTag", "==", departmentTag),
+        where("title", "==", title),
+        where("status", "in", [
+          "pending",
+          "in_progress",
+          "resolved_pending_verification",
+        ])
+      );
+
+      const activeSnapshot = await getDocs(activeQuery);
+      const nearbyDuplicates = [];
+
+      activeSnapshot.forEach((doc) => {
+        const post = doc.data();
+        const distance = calculateDistance(
+          Number(lat),
+          Number(lng),
+          post.lat,
+          post.lng
+        );
+
+        // Check if within 75 meters
+        if (distance <= 75) {
+          nearbyDuplicates.push({
+            id: doc.id,
+            ...post,
+            distance: Math.round(distance),
+            canProceed: true, // Warning only
+          });
+        }
+      });
+
+      // Check 2: Recently resolved issues (within 48 hours)
+      const fortyEightHoursAgo = new Date();
+      fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
+
+      const resolvedQuery = query(
+        postsRef,
+        where("departmentTag", "==", departmentTag),
+        where("title", "==", title),
+        where("status", "==", "resolved_verified")
+      );
+
+      const resolvedSnapshot = await getDocs(resolvedQuery);
+
+      resolvedSnapshot.forEach((doc) => {
+        const post = doc.data();
+        const distance = calculateDistance(
+          Number(lat),
+          Number(lng),
+          post.lat,
+          post.lng
+        );
+
+        // Check if within 75 meters AND resolved within last 48 hours
+        if (distance <= 75) {
+          const resolutionDate =
+            post.resolutionDate?.toDate?.() || post.resolvedAt?.toDate?.();
+          if (resolutionDate && resolutionDate >= fortyEightHoursAgo) {
+            const hoursAgo = Math.round(
+              (new Date() - resolutionDate) / (1000 * 60 * 60)
+            );
+            const hoursRemaining = 48 - hoursAgo;
+            nearbyDuplicates.push({
+              id: doc.id,
+              ...post,
+              distance: Math.round(distance),
+              canProceed: false, // BLOCK submission
+              hoursRemaining,
+              resolutionDate,
+            });
+          }
+        }
+      });
+
+      return nearbyDuplicates;
+    } catch (err) {
+      console.error("Error checking duplicates:", err);
+      return [];
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
+    try {
+      // Check for duplicates before submitting
+      const foundDuplicates = await checkForDuplicates();
+
+      if (foundDuplicates.length > 0) {
+        setDuplicates(foundDuplicates);
+        setSubmitting(false);
+        onDuplicateDialogOpen();
+        return; // Stop here and wait for user decision
+      }
+
+      // No duplicates, proceed with submission
+      await submitReport();
+    } catch (err) {
+      setError(err.message);
+      toast({
+        title: "Failed to submit report",
+        description:
+          err.message || "An error occurred while submitting your report.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      setSubmitting(false);
+    }
+  };
+
+  const submitReport = async () => {
     try {
       const { imageURL, imageStoragePath } = await uploadImage();
       const titleLower = (title || "").trim().toLowerCase();
@@ -419,6 +616,29 @@ export default function CreatePost() {
         actionNote: "",
         titleLower,
         titleSubstrings,
+        // Enhanced lifecycle fields
+        resolutionImage: null,
+        resolutionNote: null,
+        resolutionDate: null,
+        resolvedBy: null,
+        verificationStatus: null,
+        verificationImage: null,
+        verificationComment: null,
+        verificationDate: null,
+        verificationBy: null,
+        statusHistory: [
+          {
+            timestamp: new Date().toISOString(),
+            action: "created",
+            by: {
+              uid: user.uid,
+              name: profile?.name || "",
+              role: "public",
+            },
+            status: "pending",
+            comment: "Issue reported",
+          },
+        ],
       };
       await addDoc(collection(db, "posts"), payload);
       setTitle("");
@@ -445,6 +665,32 @@ export default function CreatePost() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Handle user decision to proceed despite duplicates
+  const handleProceedAnyway = async () => {
+    onDuplicateDialogClose();
+    setSubmitting(true);
+    try {
+      await submitReport();
+    } catch (err) {
+      setError(err.message);
+      toast({
+        title: "Failed to submit report",
+        description:
+          err.message || "An error occurred while submitting your report.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCancelSubmit = () => {
+    onDuplicateDialogClose();
+    setDuplicates([]);
   };
 
   // Build all unique substrings (length 2..30) of the title for Firestore contains-like search
@@ -631,21 +877,13 @@ export default function CreatePost() {
         <Box as="form" onSubmit={handleSubmit}>
           <VStack spacing={4} align="stretch">
             <FormControl isRequired>
-              <FormLabel>Title</FormLabel>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-            </FormControl>
-            <FormControl isRequired>
-              <FormLabel>Description</FormLabel>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </FormControl>
-            <FormControl isRequired>
               <FormLabel>Department</FormLabel>
               <Select
                 value={departmentTag}
-                onChange={(e) => setDepartmentTag(e.target.value)}
+                onChange={(e) => {
+                  setDepartmentTag(e.target.value);
+                  setTitle(""); // Reset title when department changes
+                }}
               >
                 {DEPARTMENTS.map((d) => (
                   <option key={d} value={d}>
@@ -654,7 +892,29 @@ export default function CreatePost() {
                 ))}
               </Select>
             </FormControl>
-            <FormControl>
+            <FormControl isRequired>
+              <FormLabel>Issue Type</FormLabel>
+              <Select
+                placeholder="Select issue type"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              >
+                {ISSUE_TITLES[departmentTag]?.map((issueTitle) => (
+                  <option key={issueTitle} value={issueTitle}>
+                    {issueTitle}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Description</FormLabel>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Provide detailed description of the issue..."
+              />
+            </FormControl>
+            <FormControl isRequired>
               <FormLabel>Image (camera or file)</FormLabel>
               <HStack spacing={2}>
                 <Input
@@ -663,12 +923,14 @@ export default function CreatePost() {
                   accept="image/*"
                   onChange={handleFileChange}
                   display="none"
+                  required={false}
                 />
                 <Input
                   readOnly
                   value={file ? file.name : "No file chosen"}
                   placeholder="No file chosen"
                   flex={1}
+                  isInvalid={!file}
                 />
                 <Button
                   onClick={handleUploadClick}
@@ -723,6 +985,131 @@ export default function CreatePost() {
           </VStack>
         </Box>
       </SimpleGrid>
+
+      {/* Duplicate Detection Alert Dialog */}
+      <AlertDialog
+        isOpen={isDuplicateDialogOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={handleCancelSubmit}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              {duplicates[0]?.canProceed === false
+                ? "⛔ Cannot Report Issue"
+                : "⚠️ Similar Issue Already Reported"}
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              {duplicates[0]?.canProceed === false ? (
+                <>
+                  <Text mb={3} color="red.600" fontWeight="semibold">
+                    This <strong>{title}</strong> issue was recently resolved
+                    and verified. You cannot report the same issue within 48
+                    hours of resolution.
+                  </Text>
+                  {duplicates.length > 0 && (
+                    <Box
+                      bg="red.50"
+                      p={3}
+                      borderRadius="md"
+                      mb={3}
+                      borderWidth="1px"
+                      borderColor="red.200"
+                    >
+                      <Text fontSize="sm" fontWeight="semibold" mb={1}>
+                        Recently Resolved Issue:
+                      </Text>
+                      <Text fontSize="sm">
+                        📍 Distance:{" "}
+                        <strong>{duplicates[0].distance}m away</strong>
+                      </Text>
+                      <Text fontSize="sm">
+                        ✅ Status: <strong>Resolved & Verified</strong>
+                      </Text>
+                      <Text fontSize="sm">
+                        🕒 Resolved:{" "}
+                        <strong>
+                          {duplicates[0].resolutionDate?.toLocaleString?.() ||
+                            "Recently"}
+                        </strong>
+                      </Text>
+                      <Text
+                        fontSize="sm"
+                        color="red.700"
+                        fontWeight="semibold"
+                        mt={2}
+                      >
+                        ⏳ Please wait{" "}
+                        <strong>{duplicates[0].hoursRemaining} hours</strong>{" "}
+                        before reporting again.
+                      </Text>
+                    </Box>
+                  )}
+                  <Text fontSize="sm" color="gray.600">
+                    This restriction prevents duplicate reports for recently
+                    fixed issues. If the problem persists after 48 hours, you
+                    can report it again.
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text mb={3}>
+                    A similar <strong>{title}</strong> issue has already been
+                    reported nearby and is currently{" "}
+                    <strong>
+                      {duplicates[0]?.status === "pending"
+                        ? "pending"
+                        : duplicates[0]?.status === "in_progress"
+                        ? "in progress"
+                        : "awaiting verification"}
+                    </strong>
+                    .
+                  </Text>
+                  {duplicates.length > 0 && (
+                    <Box
+                      bg="yellow.50"
+                      p={3}
+                      borderRadius="md"
+                      mb={3}
+                      borderWidth="1px"
+                      borderColor="yellow.200"
+                    >
+                      <Text fontSize="sm" fontWeight="semibold" mb={1}>
+                        Existing Report:
+                      </Text>
+                      <Text fontSize="sm">
+                        📍 Distance:{" "}
+                        <strong>{duplicates[0].distance}m away</strong>
+                      </Text>
+                      <Text fontSize="sm">
+                        📋 Status: <strong>{duplicates[0].status}</strong>
+                      </Text>
+                      <Text fontSize="sm" noOfLines={2}>
+                        📝 {duplicates[0].description}
+                      </Text>
+                    </Box>
+                  )}
+                  <Text fontSize="sm" color="gray.600">
+                    Do you still want to report this issue?
+                  </Text>
+                </>
+              )}
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={handleCancelSubmit}>
+                {duplicates[0]?.canProceed === false ? "OK" : "Cancel"}
+              </Button>
+              {duplicates[0]?.canProceed !== false && (
+                <Button colorScheme="blue" onClick={handleProceedAnyway} ml={3}>
+                  Report Anyway
+                </Button>
+              )}
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Container>
   );
 }

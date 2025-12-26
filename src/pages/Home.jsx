@@ -36,11 +36,57 @@ import {
 } from "@chakra-ui/react";
 import { SearchIcon } from "@chakra-ui/icons";
 import { keyframes } from "@emotion/react";
-import { FaHandsHelping, FaMapMarkerAlt, FaRegLightbulb } from "react-icons/fa";
+import {
+  FaHandsHelping,
+  FaMapMarkerAlt,
+  FaRegLightbulb,
+  FaArrowRight,
+} from "react-icons/fa";
 import PostCard from "../components/PostCard";
 import IssuesMap from "../components/IssuesMap";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+
+// Pre-defined issue titles by department (same as CreatePost)
+const ISSUE_TITLES = {
+  Electricity: [
+    "Power Outage",
+    "Faulty Streetlight",
+    "Damaged Transformer",
+    "Electric Pole Issue",
+    "Wire Damage",
+    "Meter Problem",
+    "Other Electricity Issue",
+  ],
+  Water: [
+    "No Water Supply",
+    "Low Water Pressure",
+    "Pipe Leakage",
+    "Water Contamination",
+    "Broken Valve",
+    "Water Wastage",
+    "Other Water Issue",
+  ],
+  Sewage: [
+    "Blocked Drain",
+    "Sewage Overflow",
+    "Manhole Issue",
+    "Foul Smell",
+    "Drainage Problem",
+    "Sanitation Issue",
+    "Other Sewage Issue",
+  ],
+  Road: [
+    "Pothole",
+    "Road Damage",
+    "Traffic Congestion",
+    "Accident",
+    "Missing Sign",
+    "Street Flooding",
+    "Broken Footpath",
+    "Other Road Issue",
+  ],
+};
 
 export default function Home({ showIntro = true }) {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
@@ -53,7 +99,8 @@ export default function Home({ showIntro = true }) {
     total: 0,
     pending: 0,
     in_progress: 0,
-    resolved: 0,
+    resolved_pending_verification: 0,
+    resolved_verified: 0,
     rejected: 0,
   });
   const [lastVisible, setLastVisible] = useState(null);
@@ -153,7 +200,8 @@ export default function Home({ showIntro = true }) {
         total: allPosts.length,
         pending: 0,
         in_progress: 0,
-        resolved: 0,
+        resolved_pending_verification: 0,
+        resolved_verified: 0,
         rejected: 0,
         deleted: 0,
       };
@@ -425,7 +473,8 @@ export default function Home({ showIntro = true }) {
       const c = {
         total: allList.length,
         pending: 0,
-        in_progress: 0,
+        in_progr_pending_verification: 0,
+        resolved_verifiedess: 0,
         resolved: 0,
         rejected: 0,
         deleted: 0,
@@ -768,12 +817,9 @@ export default function Home({ showIntro = true }) {
 
       {/* Stats Dashboard */}
       <Box
-        display={{ base: "flex", md: "grid" }}
-        gridTemplateColumns={{
-          md: `repeat(${isSuperAdmin ? 6 : 5}, 1fr)`,
-        }}
-        overflowX={{ base: "auto", md: "visible" }}
-        gap={3}
+        display="flex"
+        overflowX="auto"
+        gap={2}
         mb={5}
         w="100%"
         css={{
@@ -793,9 +839,9 @@ export default function Home({ showIntro = true }) {
         }}
       >
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #667eea 0%, #764ba2 100%)"
           color="white"
@@ -821,9 +867,9 @@ export default function Home({ showIntro = true }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -831,7 +877,7 @@ export default function Home({ showIntro = true }) {
             Total
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
@@ -840,9 +886,9 @@ export default function Home({ showIntro = true }) {
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #f093fb 0%, #f5576c 100%)"
           color="white"
@@ -868,9 +914,9 @@ export default function Home({ showIntro = true }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -878,7 +924,7 @@ export default function Home({ showIntro = true }) {
             Pending
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
@@ -887,9 +933,9 @@ export default function Home({ showIntro = true }) {
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #fa709a 0%, #fee140 100%)"
           color="white"
@@ -915,9 +961,9 @@ export default function Home({ showIntro = true }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -925,7 +971,7 @@ export default function Home({ showIntro = true }) {
             In Progress
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
@@ -934,11 +980,11 @@ export default function Home({ showIntro = true }) {
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
-          bgGradient="linear(135deg, #30cfd0 0%, #330867 100%)"
+          bgGradient="linear(135deg, #f59e0b 0%, #d97706 100%)"
           color="white"
           textAlign="center"
           boxShadow="xl"
@@ -962,28 +1008,75 @@ export default function Home({ showIntro = true }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
           >
-            Resolved
+            Pending Verification
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
-            {counts.resolved}
+            {counts.resolved_pending_verification}
           </Text>
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
+          borderRadius="xl"
+          bgGradient="linear(135deg, #10b981 0%, #059669 100%)"
+          color="white"
+          textAlign="center"
+          boxShadow="xl"
+          position="relative"
+          overflow="hidden"
+          transition="all 0.3s ease"
+          _hover={{
+            transform: "translateY(-4px)",
+            boxShadow: "2xl",
+          }}
+          _before={{
+            content: '""',
+            position: "absolute",
+            top: "-50%",
+            right: "-50%",
+            width: "200%",
+            height: "200%",
+            background:
+              "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
+            pointerEvents: "none",
+          }}
+        >
+          <Text
+            fontSize="2xs"
+            fontWeight="bold"
+            mb={1}
+            textTransform="uppercase"
+            letterSpacing="wide"
+            opacity={0.9}
+          >
+            Verified & Closed
+          </Text>
+          <Text
+            fontSize="2xl"
+            fontWeight="extrabold"
+            textShadow="0 2px 10px rgba(0,0,0,0.2)"
+          >
+            {counts.resolved_verified}
+          </Text>
+        </Box>
+
+        <Box
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #ff0844 0%, #ffb199 100%)"
           color="white"
@@ -1009,9 +1102,9 @@ export default function Home({ showIntro = true }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -1019,185 +1112,149 @@ export default function Home({ showIntro = true }) {
             Rejected
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
             {counts.rejected}
           </Text>
         </Box>
-
-        {isSuperAdmin && (
-          <Box
-            minW={{ base: "140px", md: "auto" }}
-            flex={{ base: "0 0 auto", md: "1" }}
-            p={5}
-            borderRadius="xl"
-            bgGradient="linear(135deg, #868f96 0%, #596164 100%)"
-            color="white"
-            textAlign="center"
-            boxShadow="xl"
-            position="relative"
-            overflow="hidden"
-            transition="all 0.3s ease"
-            _hover={{
-              transform: "translateY(-4px)",
-              boxShadow: "2xl",
-            }}
-            _before={{
-              content: '""',
-              position: "absolute",
-              top: "-50%",
-              right: "-50%",
-              width: "200%",
-              height: "200%",
-              background:
-                "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
-              pointerEvents: "none",
-            }}
-          >
-            <Text
-              fontSize="xs"
-              fontWeight="bold"
-              mb={2}
-              textTransform="uppercase"
-              letterSpacing="wide"
-              opacity={0.9}
-            >
-              Deleted
-            </Text>
-            <Text
-              fontSize="3xl"
-              fontWeight="extrabold"
-              textShadow="0 2px 10px rgba(0,0,0,0.2)"
-            >
-              {counts.deleted}
-            </Text>
-          </Box>
-        )}
       </Box>
 
-      {/* Search controls for Home feed */}
-      <VStack align="stretch" spacing={2} mb={4}>
-        {/* Search bar - full width on mobile, on separate line */}
-        <InputGroup w="100%">
-          <InputLeftElement pointerEvents="none">
-            <SearchIcon color="gray.400" />
-          </InputLeftElement>
-          <Input
-            placeholder="Search reports by title"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            bg="white"
-            pl={10}
-            size="md"
-          />
-        </InputGroup>
-        {/* All filters on one line for desktop, wrap on mobile */}
-        <HStack
-          spacing={3}
-          align="center"
-          wrap={{ base: "wrap", md: "wrap", lg: "nowrap" }}
-          w="100%"
-        >
-          <Select
-            placeholder="Department (all)"
-            value={deptFilter}
-            onChange={(e) => setDeptFilter(e.target.value)}
-            bg="white"
-            size="md"
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
-            minW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
-            maxW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
-            borderRadius="md"
-          >
-            <option value="Electricity">Electricity</option>
-            <option value="Water">Water</option>
-            <option value="Sewage">Sewage</option>
-            <option value="Road">Road</option>
-          </Select>
-          <Select
-            placeholder="Status (all)"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            bg="white"
-            size="md"
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
-            minW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
-            maxW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
-            borderRadius="md"
-          >
-            <option value="pending">Pending</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
-            <option value="rejected">Rejected</option>
-            {isSuperAdmin && <option value="deleted">Deleted</option>}
-          </Select>
+      {/* Search controls for feed page only */}
+      {!showIntro && (
+        <VStack align="stretch" spacing={2} mb={4}>
+          {/* All filters on one line for desktop, wrap on mobile */}
           <HStack
-            spacing={2}
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+            spacing={3}
+            align="center"
+            wrap={{ base: "wrap", md: "wrap", lg: "nowrap" }}
+            w="100%"
           >
-            <Text fontSize="sm" fontWeight="medium" whiteSpace="nowrap">
-              From:
-            </Text>
-            <Input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
+            <Select
+              placeholder="Department (all)"
+              value={deptFilter}
+              onChange={(e) => {
+                setDeptFilter(e.target.value);
+                setSearchText(""); // Reset title when department changes
+              }}
               bg="white"
               size="md"
-              minW={{ base: "auto", md: "165px", lg: "165px" }}
-              maxW={{ base: "auto", md: "165px", lg: "165px" }}
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+              minW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
+              maxW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
               borderRadius="md"
-            />
-          </HStack>
-          <HStack
-            spacing={2}
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
-          >
-            <Text fontSize="sm" fontWeight="medium" whiteSpace="nowrap">
-              To:
-            </Text>
-            <Input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
+            >
+              <option value="Electricity">Electricity</option>
+              <option value="Water">Water</option>
+              <option value="Sewage">Sewage</option>
+              <option value="Road">Road</option>
+            </Select>
+            <Select
+              placeholder="Issue Type (all)"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
               bg="white"
               size="md"
-              minW={{ base: "auto", md: "165px", lg: "165px" }}
-              maxW={{ base: "auto", md: "165px", lg: "165px" }}
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+              minW={{ base: "calc(50% - 6px)", md: "180px", lg: "180px" }}
+              maxW={{ base: "calc(50% - 6px)", md: "180px", lg: "180px" }}
               borderRadius="md"
-            />
+              isDisabled={!deptFilter}
+            >
+              {deptFilter &&
+                ISSUE_TITLES[deptFilter]?.map((title) => (
+                  <option key={title} value={title}>
+                    {title}
+                  </option>
+                ))}
+            </Select>
+            <Select
+              placeholder="Status (all)"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              bg="white"
+              size="md"
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+              minW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
+              maxW={{ base: "calc(50% - 6px)", md: "150px", lg: "140px" }}
+              borderRadius="md"
+            >
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved_pending_verification">
+                Resolved - Pending Verification
+              </option>
+              <option value="resolved_verified">Verified & Closed</option>
+              <option value="rejected">Rejected</option>
+              {isSuperAdmin && <option value="deleted">Deleted</option>}
+            </Select>
+            <HStack
+              spacing={2}
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+            >
+              <Text fontSize="sm" fontWeight="medium" whiteSpace="nowrap">
+                From:
+              </Text>
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                bg="white"
+                size="md"
+                minW={{ base: "auto", md: "165px", lg: "165px" }}
+                maxW={{ base: "auto", md: "165px", lg: "165px" }}
+                borderRadius="md"
+              />
+            </HStack>
+            <HStack
+              spacing={2}
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+            >
+              <Text fontSize="sm" fontWeight="medium" whiteSpace="nowrap">
+                To:
+              </Text>
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                bg="white"
+                size="md"
+                minW={{ base: "auto", md: "165px", lg: "165px" }}
+                maxW={{ base: "auto", md: "165px", lg: "165px" }}
+                borderRadius="md"
+              />
+            </HStack>
+            {/* Buttons - full width on mobile, auto on desktop */}
+            <Button
+              colorScheme="blue"
+              onClick={handleApplySearch}
+              isDisabled={
+                !hasTyped &&
+                !hasStatusSelected &&
+                !deptFilter &&
+                !fromDate &&
+                !toDate
+              }
+              size="md"
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+              minW={{ base: "calc(50% - 6px)", md: "110px", lg: "100px" }}
+            >
+              Search
+            </Button>
+            <Button
+              onClick={handleClearSearch}
+              isDisabled={!isSearchingActive}
+              colorScheme="red"
+              size="md"
+              flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+              minW={{ base: "calc(50% - 6px)", md: "110px", lg: "100px" }}
+            >
+              Clear filter
+            </Button>
           </HStack>
-          {/* Buttons - full width on mobile, auto on desktop */}
-          <Button
-            colorScheme="blue"
-            onClick={handleApplySearch}
-            isDisabled={
-              !hasTyped &&
-              !hasStatusSelected &&
-              !deptFilter &&
-              !fromDate &&
-              !toDate
-            }
-            size="md"
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
-            minW={{ base: "calc(50% - 6px)", md: "110px", lg: "100px" }}
-          >
-            Search
-          </Button>
-          <Button
-            onClick={handleClearSearch}
-            isDisabled={!isSearchingActive}
-            colorScheme="red"
-            size="md"
-            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
-            minW={{ base: "calc(50% - 6px)", md: "110px", lg: "100px" }}
-          >
-            Clear filter
-          </Button>
-        </HStack>
-      </VStack>
+        </VStack>
+      )}
 
       {error && (
         <Alert status="error" mb={4}>
@@ -1236,41 +1293,69 @@ export default function Home({ showIntro = true }) {
         )
       ) : (
         <>
-          {/* Infinite scroll grid */}
+          {/* Posts grid */}
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-            {(isSearchingActive ? filteredPosts : posts).map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                showAsYou={user && post?.createdBy?.uid === user.uid}
-              />
-            ))}
+            {(isSearchingActive ? filteredPosts : posts)
+              .slice(0, showIntro && !isSearchingActive ? 6 : undefined)
+              .map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  showAsYou={user && post?.createdBy?.uid === user.uid}
+                />
+              ))}
           </SimpleGrid>
 
-          {/* Sentinel for infinite scroll */}
-          <Box ref={loadMoreRef} textAlign="center" py={4} color="gray.600">
-            {isSearchingActive ? (
-              searchIsFetchingMore ? (
+          {/* Show More button - only on home page, after posts, before footer */}
+          {showIntro && !isSearchingActive && posts.length > 6 && (
+            <Box textAlign="center" mt={8} mb={6}>
+              <Button
+                colorScheme="blue"
+                size="lg"
+                rightIcon={<FaArrowRight />}
+                onClick={() => navigate("/feed")}
+                px={8}
+                py={6}
+                fontSize="md"
+                fontWeight="semibold"
+                boxShadow="md"
+                _hover={{
+                  transform: "translateY(-2px)",
+                  boxShadow: "lg",
+                }}
+                transition="all 0.2s"
+              >
+                Show More Posts
+              </Button>
+            </Box>
+          )}
+
+          {/* Sentinel for infinite scroll - only on feed page */}
+          {!showIntro && (
+            <Box ref={loadMoreRef} textAlign="center" py={4} color="gray.600">
+              {isSearchingActive ? (
+                searchIsFetchingMore ? (
+                  <HStack justify="center">
+                    <Spinner size="sm" />
+                    <Text>Loading more...</Text>
+                  </HStack>
+                ) : searchHasMore ? (
+                  <Text>Scroll to load more</Text>
+                ) : (
+                  <Text>No more reports</Text>
+                )
+              ) : isFetchingMore ? (
                 <HStack justify="center">
                   <Spinner size="sm" />
                   <Text>Loading more...</Text>
                 </HStack>
-              ) : searchHasMore ? (
+              ) : hasMore ? (
                 <Text>Scroll to load more</Text>
               ) : (
                 <Text>No more reports</Text>
-              )
-            ) : isFetchingMore ? (
-              <HStack justify="center">
-                <Spinner size="sm" />
-                <Text>Loading more...</Text>
-              </HStack>
-            ) : hasMore ? (
-              <Text>Scroll to load more</Text>
-            ) : (
-              <Text>No more reports</Text>
-            )}
-          </Box>
+              )}
+            </Box>
+          )}
         </>
       )}
     </Container>

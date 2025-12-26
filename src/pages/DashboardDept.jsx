@@ -12,6 +12,8 @@ import {
   limit,
   startAfter,
   Timestamp,
+  deleteField,
+  arrayUnion,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
@@ -39,15 +41,73 @@ import {
   Skeleton,
   SkeletonText,
   Spinner,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+  FormControl,
+  FormLabel,
+  useDisclosure,
+  Progress,
 } from "@chakra-ui/react";
 import { SearchIcon } from "@chakra-ui/icons";
 import PostCard from "../components/PostCard";
 import IssuesMap from "../components/IssuesMap";
+import { notifyUserStatusChange } from "../lib/notifications";
 import {
   getCurrentPosition,
   distanceKm,
   googleMapsLink,
 } from "../lib/location";
+
+// Pre-defined issue titles by department (same as CreatePost)
+const ISSUE_TITLES = {
+  Electricity: [
+    "Power Outage",
+    "Faulty Streetlight",
+    "Damaged Transformer",
+    "Electric Pole Issue",
+    "Wire Damage",
+    "Meter Problem",
+    "Other Electricity Issue",
+  ],
+  Water: [
+    "No Water Supply",
+    "Low Water Pressure",
+    "Pipe Leakage",
+    "Water Contamination",
+    "Broken Valve",
+    "Water Wastage",
+    "Other Water Issue",
+  ],
+  Sewage: [
+    "Blocked Drain",
+    "Sewage Overflow",
+    "Manhole Issue",
+    "Foul Smell",
+    "Drainage Problem",
+    "Sanitation Issue",
+    "Other Sewage Issue",
+  ],
+  Road: [
+    "Pothole",
+    "Road Damage",
+    "Traffic Congestion",
+    "Accident",
+    "Missing Sign",
+    "Street Flooding",
+    "Broken Footpath",
+    "Other Road Issue",
+  ],
+};
+
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+const CLOUDINARY_FOLDER =
+  import.meta.env.VITE_CLOUDINARY_FOLDER || "district-care/resolution-images";
 
 export default function DashboardDept({ fixedDept }) {
   const params = useParams();
@@ -71,6 +131,8 @@ export default function DashboardDept({ fixedDept }) {
     pending: 0,
     in_progress: 0,
     resolved: 0,
+    resolved_pending_verification: 0,
+    resolved_verified: 0,
     rejected: 0,
     deleted: 0,
   });
@@ -96,6 +158,19 @@ export default function DashboardDept({ fixedDept }) {
   // Show 6 items per page for department dashboards
   const PAGE_SIZE = 6;
   const toast = useToast();
+
+  // Resolution modal state
+  const {
+    isOpen: isResolutionModalOpen,
+    onOpen: onResolutionModalOpen,
+    onClose: onResolutionModalClose,
+  } = useDisclosure();
+  const [resolvingPostId, setResolvingPostId] = useState(null);
+  const [resolutionImage, setResolutionImage] = useState(null);
+  const [resolutionNote, setResolutionNote] = useState("");
+  const [resolutionProgress, setResolutionProgress] = useState(0);
+  const [isSubmittingResolution, setIsSubmittingResolution] = useState(false);
+  const resolutionFileInputRef = useRef(null);
 
   const isSuperAdmin = profile?.role === "admin";
 
@@ -179,6 +254,8 @@ export default function DashboardDept({ fixedDept }) {
         pending: 0,
         in_progress: 0,
         resolved: 0,
+        resolved_pending_verification: 0,
+        resolved_verified: 0,
         rejected: 0,
         deleted: 0,
       };
@@ -490,6 +567,8 @@ export default function DashboardDept({ fixedDept }) {
         pending: 0,
         in_progress: 0,
         resolved: 0,
+        resolved_pending_verification: 0,
+        resolved_verified: 0,
         rejected: 0,
         deleted: 0,
       };
@@ -645,21 +724,63 @@ export default function DashboardDept({ fixedDept }) {
     const newStatus = statusMap[postId];
     const actionNote = noteMap[postId] || "";
     if (!newStatus) return;
+
+    // If status is being changed to "resolved", open resolution modal
+    if (newStatus === "resolved") {
+      setResolvingPostId(postId);
+      onResolutionModalOpen();
+      return;
+    }
+
+    // For other status changes
     try {
+      const post = posts.find((p) => p.id === postId);
       const updateData = {
         status: newStatus,
         actionNote: actionNote.trim(),
       };
 
-      // Add resolvedAt timestamp when status is set to resolved
+      // Only update resolvedAt if setting to resolved or if it exists and needs removal
       if (newStatus === "resolved") {
         updateData.resolvedAt = Timestamp.now();
-      } else {
-        // Remove resolvedAt if status is changed to anything other than resolved
-        updateData.resolvedAt = null;
+      } else if (post?.resolvedAt) {
+        // Only remove if it exists
+        updateData.resolvedAt = deleteField();
       }
 
+      // Add to statusHistory using arrayUnion to avoid permission issues
+      const statusHistoryEntry = {
+        timestamp: new Date().toISOString(),
+        action: `status_changed_to_${newStatus}`,
+        by: {
+          uid: user.uid,
+          name: profile?.name || "",
+          role: profile?.role || "admin",
+        },
+        status: newStatus,
+        comment: actionNote.trim() || `Status changed to ${newStatus}`,
+      };
+
+      updateData.statusHistory = arrayUnion(statusHistoryEntry);
+
       await updateDoc(doc(db, "posts", postId), updateData);
+
+      // Send notification to user about status change
+      if (post?.createdBy?.uid) {
+        try {
+          await notifyUserStatusChange(
+            post.createdBy.uid,
+            postId,
+            post.title || "Your issue",
+            post.status,
+            newStatus,
+            actionNote.trim()
+          );
+        } catch (notifErr) {
+          console.error("Error sending notification:", notifErr);
+        }
+      }
+
       toast({ title: "Updated", status: "success", duration: 1500 });
       setStatusMap((prev) => ({ ...prev, [postId]: "" }));
       setNoteMap((prev) => ({ ...prev, [postId]: "" }));
@@ -671,6 +792,186 @@ export default function DashboardDept({ fixedDept }) {
         status: "error",
         duration: 3000,
       });
+    }
+  };
+
+  // Upload resolution image to Cloudinary
+  const uploadResolutionImage = () => {
+    if (!resolutionImage)
+      return Promise.resolve({ imageURL: "", imageStoragePath: "" });
+    return new Promise((resolve, reject) => {
+      const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`;
+
+      const formData = new FormData();
+      formData.append("file", resolutionImage);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+      formData.append("folder", `${CLOUDINARY_FOLDER}/${user.uid}`);
+      formData.append("context", `uid=${user.uid}|email=${user.email}`);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", url);
+      xhr.upload.addEventListener("progress", (evt) => {
+        if (evt.lengthComputable) {
+          const pct = Math.round((evt.loaded / evt.total) * 100);
+          setResolutionProgress(pct);
+        }
+      });
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === 4) {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const res = JSON.parse(xhr.responseText);
+              resolve({
+                imageURL: res.secure_url,
+                imageStoragePath: res.public_id,
+              });
+            } catch (e) {
+              reject(e);
+            }
+          } else {
+            try {
+              const res = JSON.parse(xhr.responseText);
+              reject(
+                new Error(
+                  res.error?.message ||
+                    `Cloudinary upload failed (status ${xhr.status})`
+                )
+              );
+            } catch {
+              reject(
+                new Error(
+                  `Cloudinary upload failed (status ${xhr.status}): ${
+                    xhr.responseText || "No response"
+                  }`
+                )
+              );
+            }
+          }
+        }
+      };
+      xhr.onerror = () =>
+        reject(new Error("Network error during Cloudinary upload"));
+      xhr.send(formData);
+    });
+  };
+
+  // Handle resolution submission
+  const handleSubmitResolution = async () => {
+    if (!resolutionImage || !resolvingPostId) {
+      toast({
+        title: "Image Required",
+        description: "Please upload a resolution image before submitting.",
+        status: "warning",
+        duration: 3000,
+      });
+      return;
+    }
+
+    setIsSubmittingResolution(true);
+    try {
+      const post = posts.find((p) => p.id === resolvingPostId);
+      const actionNote = noteMap[resolvingPostId] || "";
+
+      // Upload image
+      const { imageURL, imageStoragePath } = await uploadResolutionImage();
+
+      // Update post with resolution data - must match security rules exactly
+      const updateData = {
+        status: "resolved_pending_verification",
+        actionNote: actionNote.trim() || "",
+        resolvedAt: Timestamp.now(),
+        resolutionImage: imageURL,
+        resolutionNote: resolutionNote.trim() || "",
+        resolutionDate: Timestamp.now(),
+        resolvedBy: {
+          uid: user.uid,
+          name: profile?.name || user.email || "",
+          department: profile?.department || dept || "",
+        },
+        statusHistory: arrayUnion({
+          timestamp: new Date().toISOString(),
+          action: "resolved",
+          by: {
+            uid: user.uid,
+            name: profile?.name || user.email || "",
+            role: profile?.role || "dept",
+          },
+          status: "resolved_pending_verification",
+          comment:
+            resolutionNote.trim() ||
+            "Marked as resolved - pending user verification",
+        }),
+      };
+
+      await updateDoc(doc(db, "posts", resolvingPostId), updateData);
+
+      // Send notification to user about resolution
+      if (post?.createdBy?.uid) {
+        try {
+          await notifyUserStatusChange(
+            post.createdBy.uid,
+            resolvingPostId,
+            post.title || "Your issue",
+            post.status,
+            "resolved_pending_verification",
+            resolutionNote.trim() || "Issue resolved - please verify"
+          );
+        } catch (notifErr) {
+          console.error("Error sending notification:", notifErr);
+        }
+      }
+
+      toast({
+        title: "Resolved Successfully",
+        description: "Issue marked as resolved. Awaiting user verification.",
+        status: "success",
+        duration: 3000,
+      });
+
+      // Clear state
+      setStatusMap((prev) => ({ ...prev, [resolvingPostId]: "" }));
+      setNoteMap((prev) => ({ ...prev, [resolvingPostId]: "" }));
+      onResolutionModalClose();
+      setResolvingPostId(null);
+      setResolutionImage(null);
+      setResolutionNote("");
+      setResolutionProgress(0);
+    } catch (err) {
+      console.error("Resolution error:", err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to submit resolution",
+        status: "error",
+        duration: 5000,
+      });
+    } finally {
+      setIsSubmittingResolution(false);
+    }
+  };
+
+  const handleResolutionImageChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      setResolutionImage(file);
+      setResolutionProgress(0);
+    }
+  };
+
+  const handleClearResolutionImage = () => {
+    setResolutionImage(null);
+    setResolutionProgress(0);
+    if (resolutionFileInputRef.current) {
+      resolutionFileInputRef.current.value = "";
+    }
+  };
+
+  const handleResolutionModalClose = () => {
+    if (!isSubmittingResolution) {
+      onResolutionModalClose();
+      setResolvingPostId(null);
+      setResolutionImage(null);
+      setResolutionNote("");
+      setResolutionProgress(0);
     }
   };
 
@@ -692,12 +993,9 @@ export default function DashboardDept({ fixedDept }) {
 
       {/* Stats Dashboard */}
       <Box
-        display={{ base: "flex", md: "grid" }}
-        gridTemplateColumns={{
-          md: `repeat(${isSuperAdmin ? 6 : 5}, 1fr)`,
-        }}
-        overflowX={{ base: "auto", md: "visible" }}
-        gap={3}
+        display="flex"
+        overflowX="auto"
+        gap={2}
         mb={4}
         w="100%"
         css={{
@@ -717,9 +1015,9 @@ export default function DashboardDept({ fixedDept }) {
         }}
       >
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #667eea 0%, #764ba2 100%)"
           color="white"
@@ -745,9 +1043,9 @@ export default function DashboardDept({ fixedDept }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -755,7 +1053,7 @@ export default function DashboardDept({ fixedDept }) {
             Total
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
@@ -764,9 +1062,9 @@ export default function DashboardDept({ fixedDept }) {
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #f093fb 0%, #f5576c 100%)"
           color="white"
@@ -792,9 +1090,9 @@ export default function DashboardDept({ fixedDept }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -802,7 +1100,7 @@ export default function DashboardDept({ fixedDept }) {
             Pending
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
@@ -811,9 +1109,9 @@ export default function DashboardDept({ fixedDept }) {
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #fa709a 0%, #fee140 100%)"
           color="white"
@@ -839,9 +1137,9 @@ export default function DashboardDept({ fixedDept }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -849,7 +1147,7 @@ export default function DashboardDept({ fixedDept }) {
             In Progress
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
@@ -858,11 +1156,11 @@ export default function DashboardDept({ fixedDept }) {
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
-          bgGradient="linear(135deg, #30cfd0 0%, #330867 100%)"
+          bgGradient="linear(135deg, #f59e0b 0%, #d97706 100%)"
           color="white"
           textAlign="center"
           boxShadow="xl"
@@ -886,28 +1184,75 @@ export default function DashboardDept({ fixedDept }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
           >
-            Resolved
+            Pending Verification
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
-            {counts.resolved}
+            {counts.resolved_pending_verification}
           </Text>
         </Box>
 
         <Box
-          minW={{ base: "140px", md: "auto" }}
-          flex={{ base: "0 0 auto", md: "1" }}
-          p={5}
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
+          borderRadius="xl"
+          bgGradient="linear(135deg, #10b981 0%, #059669 100%)"
+          color="white"
+          textAlign="center"
+          boxShadow="xl"
+          position="relative"
+          overflow="hidden"
+          transition="all 0.3s ease"
+          _hover={{
+            transform: "translateY(-4px)",
+            boxShadow: "2xl",
+          }}
+          _before={{
+            content: '""',
+            position: "absolute",
+            top: "-50%",
+            right: "-50%",
+            width: "200%",
+            height: "200%",
+            background:
+              "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
+            pointerEvents: "none",
+          }}
+        >
+          <Text
+            fontSize="2xs"
+            fontWeight="bold"
+            mb={1}
+            textTransform="uppercase"
+            letterSpacing="wide"
+            opacity={0.9}
+          >
+            Verified & Closed
+          </Text>
+          <Text
+            fontSize="2xl"
+            fontWeight="extrabold"
+            textShadow="0 2px 10px rgba(0,0,0,0.2)"
+          >
+            {counts.resolved_verified}
+          </Text>
+        </Box>
+
+        <Box
+          minW={{ base: "110px", md: "120px" }}
+          flex="1"
+          p={3}
           borderRadius="xl"
           bgGradient="linear(135deg, #ff0844 0%, #ffb199 100%)"
           color="white"
@@ -933,9 +1278,9 @@ export default function DashboardDept({ fixedDept }) {
           }}
         >
           <Text
-            fontSize="xs"
+            fontSize="2xs"
             fontWeight="bold"
-            mb={2}
+            mb={1}
             textTransform="uppercase"
             letterSpacing="wide"
             opacity={0.9}
@@ -943,7 +1288,7 @@ export default function DashboardDept({ fixedDept }) {
             Rejected
           </Text>
           <Text
-            fontSize="3xl"
+            fontSize="2xl"
             fontWeight="extrabold"
             textShadow="0 2px 10px rgba(0,0,0,0.2)"
           >
@@ -953,9 +1298,9 @@ export default function DashboardDept({ fixedDept }) {
 
         {isSuperAdmin && (
           <Box
-            minW={{ base: "140px", md: "auto" }}
-            flex={{ base: "0 0 auto", md: "1" }}
-            p={5}
+            minW={{ base: "110px", md: "120px" }}
+            flex="1"
+            p={3}
             borderRadius="xl"
             bgGradient="linear(135deg, #868f96 0%, #596164 100%)"
             color="white"
@@ -981,9 +1326,9 @@ export default function DashboardDept({ fixedDept }) {
             }}
           >
             <Text
-              fontSize="xs"
+              fontSize="2xs"
               fontWeight="bold"
-              mb={2}
+              mb={1}
               textTransform="uppercase"
               letterSpacing="wide"
               opacity={0.9}
@@ -991,7 +1336,7 @@ export default function DashboardDept({ fixedDept }) {
               Deleted
             </Text>
             <Text
-              fontSize="3xl"
+              fontSize="2xl"
               fontWeight="extrabold"
               textShadow="0 2px 10px rgba(0,0,0,0.2)"
             >
@@ -1028,20 +1373,6 @@ export default function DashboardDept({ fixedDept }) {
 
       {/* Search controls for recent reports */}
       <VStack align="stretch" spacing={2} mb={4}>
-        {/* Search bar - full width on mobile, on separate line */}
-        <InputGroup w="100%">
-          <InputLeftElement pointerEvents="none">
-            <SearchIcon color="gray.400" />
-          </InputLeftElement>
-          <Input
-            placeholder="Search reports by title"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            bg="white"
-            pl={10}
-            size="md"
-          />
-        </InputGroup>
         {/* All filters on one line for desktop, wrap on mobile */}
         <HStack
           spacing={3}
@@ -1049,6 +1380,24 @@ export default function DashboardDept({ fixedDept }) {
           wrap={{ base: "wrap", md: "wrap", lg: "nowrap" }}
           w="100%"
         >
+          <Select
+            placeholder="Issue Type (all)"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            bg="white"
+            size="md"
+            flex={{ base: "1", md: "0 0 auto", lg: "0 0 auto" }}
+            minW={{ base: "calc(50% - 6px)", md: "180px", lg: "180px" }}
+            maxW={{ base: "calc(50% - 6px)", md: "180px", lg: "180px" }}
+            borderRadius="md"
+          >
+            {dept &&
+              ISSUE_TITLES[dept]?.map((title) => (
+                <option key={title} value={title}>
+                  {title}
+                </option>
+              ))}
+          </Select>
           <Select
             placeholder="Status (all)"
             value={statusFilter}
@@ -1062,7 +1411,10 @@ export default function DashboardDept({ fixedDept }) {
           >
             <option value="pending">Pending</option>
             <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
+            <option value="resolved_pending_verification">
+              Resolved - Pending Verification
+            </option>
+            <option value="resolved_verified">Verified & Closed</option>
             <option value="rejected">Rejected</option>
             {isSuperAdmin && <option value="deleted">Deleted</option>}
           </Select>
@@ -1240,6 +1592,104 @@ export default function DashboardDept({ fixedDept }) {
       )}
 
       {/* loading state handled inline with skeletons above */}
+
+      {/* Resolution Modal */}
+      <Modal
+        isOpen={isResolutionModalOpen}
+        onClose={handleResolutionModalClose}
+        closeOnOverlayClick={!isSubmittingResolution}
+        closeOnEsc={!isSubmittingResolution}
+        size="lg"
+      >
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Mark Issue as Resolved</ModalHeader>
+          <ModalCloseButton isDisabled={isSubmittingResolution} />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <Alert status="info" borderRadius="md">
+                <AlertIcon />
+                <Text fontSize="sm">
+                  Upload a photo showing the resolved issue. This image is
+                  <strong> required</strong> for verification.
+                </Text>
+              </Alert>
+
+              <FormControl isRequired>
+                <FormLabel>Resolution Image</FormLabel>
+                <HStack spacing={2}>
+                  <Input
+                    ref={resolutionFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleResolutionImageChange}
+                    display="none"
+                  />
+                  <Input
+                    readOnly
+                    value={
+                      resolutionImage ? resolutionImage.name : "No file chosen"
+                    }
+                    placeholder="No file chosen"
+                    flex={1}
+                    isInvalid={!resolutionImage}
+                  />
+                  <Button
+                    onClick={() => resolutionFileInputRef.current?.click()}
+                    isDisabled={!!resolutionImage || isSubmittingResolution}
+                    colorScheme="blue"
+                  >
+                    Upload
+                  </Button>
+                  <Button
+                    onClick={handleClearResolutionImage}
+                    isDisabled={!resolutionImage || isSubmittingResolution}
+                    colorScheme="red"
+                    variant="outline"
+                  >
+                    Clear
+                  </Button>
+                </HStack>
+                {resolutionProgress > 0 && (
+                  <Progress
+                    value={resolutionProgress}
+                    mt={2}
+                    colorScheme="blue"
+                  />
+                )}
+              </FormControl>
+
+              <FormControl>
+                <FormLabel>Resolution Note (Optional)</FormLabel>
+                <Textarea
+                  value={resolutionNote}
+                  onChange={(e) => setResolutionNote(e.target.value)}
+                  placeholder="Add any notes about the resolution..."
+                  isDisabled={isSubmittingResolution}
+                />
+              </FormControl>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="outline"
+              mr={3}
+              onClick={handleResolutionModalClose}
+              isDisabled={isSubmittingResolution}
+            >
+              Cancel
+            </Button>
+            <Button
+              colorScheme="blue"
+              onClick={handleSubmitResolution}
+              isLoading={isSubmittingResolution}
+              isDisabled={!resolutionImage}
+            >
+              Submit Resolution
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Container>
   );
 }

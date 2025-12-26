@@ -1,0 +1,149 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function userRole() {
+      return isSignedIn() ? userDoc(request.auth.uid).data.role : null;
+    }
+
+    function userDept() {
+      return isSignedIn() ? userDoc(request.auth.uid).data.department : null;
+    }
+
+    // ================== POSTS ==================
+    match /posts/{postId} {
+
+      // Anyone can read posts
+      allow read: if true;
+
+      // Public user creates a post (must start as pending, no resolved date)
+      allow create: if isSignedIn()
+        && userRole() == 'public'
+        && request.resource.data.createdBy.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && !('resolvedAt' in request.resource.data);
+
+      // Admin / Dept update (status handling + resolvedAt logic)
+      allow update: if isSignedIn()
+        && (
+          userRole() == 'admin' ||
+          (userRole() == 'dept' && userDept() == resource.data.departmentTag)
+        )
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          'status',
+          'actionNote',
+          'resolvedAt',
+          'resolutionImage',
+          'resolutionNote',
+          'resolutionDate',
+          'resolvedBy',
+          'statusHistory'
+        ]);
+
+      // Public user verification / reopen
+      allow update: if isSignedIn()
+        && userRole() == 'public'
+        && request.auth.uid == resource.data.createdBy.uid
+        && resource.data.status == 'resolved_pending_verification'
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          'status',
+          'verificationStatus',
+          'verificationImage',
+          'verificationComment',
+          'verificationDate',
+          'verificationBy',
+          'statusHistory'
+        ])
+        && (
+          // Verify & close
+          (
+            request.resource.data.status == 'resolved_verified'
+            && request.resource.data.verificationStatus == 'verified'
+          )
+          ||
+          // Reopen → pending (requires proof)
+          (
+            request.resource.data.status == 'pending'
+            && request.resource.data.verificationStatus == 'unresolved'
+            && request.resource.data.verificationImage != null
+            && request.resource.data.verificationComment != null
+          )
+        );
+
+      // Public user soft-delete own post
+      allow update: if isSignedIn()
+        && userRole() == 'public'
+        && request.auth.uid == resource.data.createdBy.uid
+        && request.resource.data.status == 'deleted'
+        && request.resource.data.deleted == true;
+
+      // No hard deletes
+      allow delete: if false;
+
+      // ================== VOTES ==================
+      match /votes/{userId} {
+
+        allow read: if true;
+
+        // Only public users can vote (self only)
+        allow create, update, delete: if isSignedIn()
+          && userRole() == 'public'
+          && request.auth.uid == userId;
+      }
+    }
+
+    // ================== USERS ==================
+    match /users/{uid} {
+
+      allow read: if true;
+
+      allow create: if isSignedIn() && request.auth.uid == uid;
+
+      allow create: if isSignedIn() && userRole() == 'admin';
+
+      allow update: if isSignedIn() && userRole() == 'admin';
+
+      allow update: if isSignedIn()
+        && request.auth.uid == uid
+        && !('role' in request.resource.data)
+        && !('department' in request.resource.data);
+
+      allow delete: if false;
+    }
+
+    // ================== NOTIFICATIONS ==================
+    match /notifications/{notificationId} {
+
+      allow read: if isSignedIn()
+        && (
+          request.auth.uid == resource.data.recipientId
+          || (
+            (userRole() == 'admin' || userRole() == 'dept')
+            && (resource.data.recipientRole == userRole() || resource.data.recipientId == 'all')
+          )
+        );
+
+      allow create: if isSignedIn();
+
+      allow update: if isSignedIn()
+        && (
+          request.auth.uid == resource.data.recipientId
+          || (
+            (userRole() == 'admin' || userRole() == 'dept')
+            && (resource.data.recipientRole == userRole() || resource.data.recipientId == 'all')
+          )
+        )
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['read']);
+
+      allow delete: if false;
+    }
+  }
+}

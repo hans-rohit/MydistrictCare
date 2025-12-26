@@ -59,7 +59,8 @@ export default function Dashboard() {
   const statusColors = {
     pending: "#f093fb",
     in_progress: "#fa709a",
-    resolved: "#30cfd0",
+    resolved_pending_verification: "#f59e0b",
+    resolved_verified: "#10b981",
     rejected: "#ff0844",
     deleted: "#868f96",
   };
@@ -130,7 +131,8 @@ export default function Dashboard() {
       const statusCounts = {
         pending: 0,
         in_progress: 0,
-        resolved: 0,
+        resolved_pending_verification: 0,
+        resolved_verified: 0,
         rejected: 0,
       };
 
@@ -142,7 +144,7 @@ export default function Dashboard() {
       });
 
       const byStatus = Object.entries(statusCounts).map(([name, value]) => ({
-        name: name.toUpperCase(),
+        name: name.replace(/_/g, " ").toUpperCase(),
         value,
         count: value,
         color: statusColors[name],
@@ -237,7 +239,9 @@ export default function Dashboard() {
       // Average Resolution Time - Average days to resolve by department
       const responseTime = Object.keys(deptCounts).map((dept) => {
         const deptPosts = posts.filter((p) => p.departmentTag === dept);
-        const resolvedPosts = deptPosts.filter((p) => p.status === "resolved");
+        const resolvedPosts = deptPosts.filter(
+          (p) => p.status === "resolved_verified"
+        );
 
         let avgDays = 0;
         let validCount = 0;
@@ -274,7 +278,12 @@ export default function Dashboard() {
         const deptPosts = posts.filter((p) => p.departmentTag === dept);
         return {
           department: dept,
-          resolved: deptPosts.filter((p) => p.status === "resolved").length,
+          resolved_verified: deptPosts.filter(
+            (p) => p.status === "resolved_verified"
+          ).length,
+          resolved_pending_verification: deptPosts.filter(
+            (p) => p.status === "resolved_pending_verification"
+          ).length,
           pending: deptPosts.filter((p) => p.status === "pending").length,
           in_progress: deptPosts.filter((p) => p.status === "in_progress")
             .length,
@@ -288,6 +297,12 @@ export default function Dashboard() {
         byMonth,
         recentActivity,
         responseTime,
+        resolved_pending_verification:
+          statusCounts.resolved_pending_verification,
+        resolved_verified: statusCounts.resolved_verified,
+        pending: statusCounts.pending,
+        in_progress: statusCounts.in_progress,
+        rejected: statusCounts.rejected,
       });
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -342,7 +357,7 @@ export default function Dashboard() {
 
         {/* Summary Cards */}
         <SimpleGrid
-          columns={{ base: 1, sm: 2, lg: 4 }}
+          columns={{ base: 1, sm: 2, md: 3, lg: 5 }}
           spacing={{ base: 3, md: 6 }}
         >
           <Box
@@ -392,7 +407,7 @@ export default function Dashboard() {
             borderWidth="1px"
             borderColor={borderColor}
             shadow="lg"
-            bgGradient="linear(135deg, #30cfd0 0%, #330867 100%)"
+            bgGradient="linear(135deg, #f59e0b 0%, #d97706 100%)"
             color="white"
             position="relative"
             overflow="hidden"
@@ -414,13 +429,53 @@ export default function Dashboard() {
                 textTransform="uppercase"
                 opacity={0.9}
               >
-                Resolved
+                Pending Verification
               </Text>
               <Text
                 fontSize={{ base: "3xl", md: "4xl" }}
                 fontWeight="extrabold"
               >
-                {stats.byStatus.find((s) => s.name === "RESOLVED")?.value || 0}
+                {stats.resolved_pending_verification || 0}
+              </Text>
+            </VStack>
+          </Box>
+
+          <Box
+            p={{ base: 4, md: 6 }}
+            bg={bgColor}
+            borderRadius="xl"
+            borderWidth="1px"
+            borderColor={borderColor}
+            shadow="lg"
+            bgGradient="linear(135deg, #10b981 0%, #059669 100%)"
+            color="white"
+            position="relative"
+            overflow="hidden"
+            _before={{
+              content: '""',
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background:
+                "radial-gradient(circle at top right, rgba(255,255,255,0.1), transparent 70%)",
+              pointerEvents: "none",
+            }}
+          >
+            <VStack align="start" spacing={2}>
+              <Text
+                fontSize={{ base: "xs", md: "sm" }}
+                textTransform="uppercase"
+                opacity={0.9}
+              >
+                Verified & Closed
+              </Text>
+              <Text
+                fontSize={{ base: "3xl", md: "4xl" }}
+                fontWeight="extrabold"
+              >
+                {stats.resolved_verified || 0}
               </Text>
             </VStack>
           </Box>
@@ -500,8 +555,7 @@ export default function Dashboard() {
                 fontSize={{ base: "3xl", md: "4xl" }}
                 fontWeight="extrabold"
               >
-                {stats.byStatus.find((s) => s.name === "IN_PROGRESS")?.value ||
-                  0}
+                {stats.in_progress || 0}
               </Text>
             </VStack>
           </Box>
@@ -758,9 +812,30 @@ export default function Dashboard() {
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: "11px" }} iconSize={10} />
-                  <Bar dataKey="resolved" stackId="a" fill="#30cfd0" />
-                  <Bar dataKey="in_progress" stackId="a" fill="#fa709a" />
-                  <Bar dataKey="pending" stackId="a" fill="#f093fb" />
+                  <Bar
+                    dataKey="resolved_verified"
+                    stackId="a"
+                    fill="#10b981"
+                    name="Verified & Closed"
+                  />
+                  <Bar
+                    dataKey="resolved_pending_verification"
+                    stackId="a"
+                    fill="#f59e0b"
+                    name="Pending Verification"
+                  />
+                  <Bar
+                    dataKey="in_progress"
+                    stackId="a"
+                    fill="#fa709a"
+                    name="In Progress"
+                  />
+                  <Bar
+                    dataKey="pending"
+                    stackId="a"
+                    fill="#f093fb"
+                    name="Pending"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </Box>

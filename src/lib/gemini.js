@@ -11,7 +11,7 @@ export const generateChatResponse = async (userMessage, postsData) => {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // Create context from posts data
     const context = createContextFromPosts(postsData);
