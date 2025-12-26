@@ -658,7 +658,7 @@ export default function Home({ showIntro = true }) {
             </Heading>
             <Text fontSize="lg" maxW="700px" mx="auto">
               Empowering citizens and departments to make our districts cleaner,
-              safer, and better — together.
+              safer, and better together.
             </Text>
             {/* darker, attention-grabbing blinking button */}
             <Button
