@@ -35,6 +35,21 @@ export default function Signup() {
   const bgColor = useColorModeValue("white", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.600");
 
+  const getErrorMessage = (errorCode) => {
+    switch (errorCode) {
+      case "auth/email-already-in-use":
+        return "This email is already registered. Please login instead.";
+      case "auth/invalid-email":
+        return "Please enter a valid email address.";
+      case "auth/weak-password":
+        return "Password must be at least 6 characters long.";
+      case "auth/operation-not-allowed":
+        return "Email/password accounts are not enabled. Please contact support.";
+      default:
+        return "An error occurred during signup. Please try again.";
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -56,7 +71,8 @@ export default function Signup() {
       );
       navigate("/");
     } catch (err) {
-      setError(err.message);
+      const errorCode = err.code;
+      setError(getErrorMessage(errorCode));
     } finally {
       setLoading(false);
     }
