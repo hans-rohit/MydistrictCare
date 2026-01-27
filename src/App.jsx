@@ -7,21 +7,21 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-import Home from "./pages/Home";
-import CreatePost from "./pages/CreatePost";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import DashboardDept from "./pages/DashboardDept";
-import Dashboard from "./pages/Dashboard";
-import DashboardAnalytics from "./pages/DashboardAnalytics";
-import Admin from "./pages/Admin";
-import Profile from "./pages/Profile";
-import IssueDetail from "./pages/IssueDetail";
-import PrivateRoute from "./components/PrivateRoute";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import Chatbot from "./components/Chatbot";
+import Header from "./views/components/Header";
+import Footer from "./views/components/Footer";
+import Home from "./views/pages/Home";
+import CreatePost from "./views/pages/CreatePost";
+import Login from "./views/pages/Login";
+import Signup from "./views/pages/Signup";
+import DashboardDept from "./views/pages/DashboardDept";
+import Dashboard from "./views/pages/Dashboard";
+import DashboardAnalytics from "./views/pages/DashboardAnalytics";
+import Admin from "./views/pages/Admin";
+import Profile from "./views/pages/Profile";
+import IssueDetail from "./views/pages/IssueDetail";
+import PrivateRoute from "./views/components/PrivateRoute";
+import { AuthProvider, useAuth } from "./controllers/AuthContext";
+import Chatbot from "./views/components/Chatbot";
 import "leaflet/dist/leaflet.css";
 
 function DeptRedirect() {
@@ -34,21 +34,17 @@ function DeptRedirect() {
 
 function HomeRedirect() {
   const { profile } = useAuth();
-  // Redirect admin to analytics dashboard
   if (profile?.role === "admin") {
     return <Navigate to="/dashboard" replace />;
   }
-  // Redirect dept-admin to their department dashboard
   if (profile?.role === "dept" && profile?.department) {
     return <Navigate to={`/dashboard/${profile.department}`} replace />;
   }
-  // Public users see normal home
   return <Home />;
 }
 
 function FooterWrapper() {
   const { user, profile } = useAuth();
-  // Show footer only for non-logged users or public users
   if (!user || profile?.role === "public") {
     return <Footer />;
   }
@@ -59,7 +55,6 @@ function ChatbotWrapper() {
   const { user } = useAuth();
   const location = useLocation();
 
-  // Don't show chatbot on login or signup pages, and only show when user is logged in
   const isAuthPage =
     location.pathname === "/login" || location.pathname === "/signup";
 
@@ -79,13 +74,11 @@ export default function App() {
             <Routes>
               <Route path="/" element={<HomeRedirect />} />
 
-              {/* Feed - only for public users and admin */}
               <Route path="/feed" element={<Home showIntro={false} />} />
 
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
 
-              {/* Create - only for public users */}
               <Route element={<PrivateRoute requireRole="public" />}>
                 <Route path="/create" element={<CreatePost />} />
               </Route>
@@ -94,12 +87,10 @@ export default function App() {
                 <Route path="/profile" element={<Profile />} />
               </Route>
 
-              {/* Issue Detail - accessible by all logged-in users */}
               <Route element={<PrivateRoute />}>
                 <Route path="/issue/:id" element={<IssueDetail />} />
               </Route>
 
-              {/* Dedicated routes so dept users only see their own link; admin can access all */}
               <Route
                 element={
                   <PrivateRoute requireRole="dept" requireDept="Electricity" />
@@ -139,12 +130,10 @@ export default function App() {
                 />
               </Route>
 
-              {/* Dynamic route still supported */}
               <Route element={<PrivateRoute requireRole="dept" />}>
                 <Route path="/dashboard/:dept" element={<DashboardDept />} />
               </Route>
 
-              {/* Analytics Dashboard for Dept Admins */}
               <Route
                 element={
                   <PrivateRoute requireRole="dept" requireDept="Electricity" />
@@ -184,7 +173,6 @@ export default function App() {
                 />
               </Route>
 
-              {/* Dynamic analytics route for dept admins */}
               <Route element={<PrivateRoute requireRole="dept" />}>
                 <Route
                   path="/analytics/:dept"
@@ -192,12 +180,10 @@ export default function App() {
                 />
               </Route>
 
-              {/* Analytics Dashboard for Admin */}
               <Route element={<PrivateRoute requireRole="admin" />}>
                 <Route path="/dashboard" element={<Dashboard />} />
               </Route>
 
-              {/* Shortcut to go to correct dashboard for dept users */}
               <Route element={<PrivateRoute requireRole="dept" />}>
                 <Route path="/dashboard" element={<DeptRedirect />} />
               </Route>
@@ -207,10 +193,8 @@ export default function App() {
               </Route>
             </Routes>
 
-            {/* AI Chatbot - Only for logged-in users, not on login/signup pages */}
             <ChatbotWrapper />
 
-            {/* Footer - Only for public and non-logged users */}
             <FooterWrapper />
           </Box>
         </BrowserRouter>
