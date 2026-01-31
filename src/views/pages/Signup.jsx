@@ -1,0 +1,212 @@
+import { useState } from "react";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../../models/firebase";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Container,
+  FormControl,
+  FormLabel,
+  Input,
+  VStack,
+  Text,
+  Alert,
+  AlertIcon,
+  Link,
+  Heading,
+  InputGroup,
+  InputLeftElement,
+  Icon,
+  useColorModeValue,
+} from "@chakra-ui/react";
+import { EmailIcon, LockIcon } from "@chakra-ui/icons";
+import { MdHealthAndSafety, MdPerson } from "react-icons/md";
+
+export default function Signup() {
+  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const bgColor = useColorModeValue("white", "gray.800");
+  const borderColor = useColorModeValue("gray.200", "gray.600");
+
+  const getErrorMessage = (errorCode) => {
+    switch (errorCode) {
+      case "auth/email-already-in-use":
+        return "This email is already registered. Please login instead.";
+      case "auth/invalid-email":
+        return "Please enter a valid email address.";
+      case "auth/weak-password":
+        return "Password must be at least 6 characters long.";
+      case "auth/operation-not-allowed":
+        return "Email/password accounts are not enabled. Please contact support.";
+      default:
+        return "An error occurred during signup. Please try again.";
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(cred.user, { displayName: name });
+      await setDoc(
+        doc(db, "users", cred.user.uid),
+        {
+          uid: cred.user.uid,
+          name,
+          email,
+          role: "public",
+          department: null,
+          createdAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+      navigate("/");
+    } catch (err) {
+      const errorCode = err.code;
+      setError(getErrorMessage(errorCode));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Container maxW="md" py={{ base: 8, md: 16 }}>
+      <VStack spacing={8} align="stretch">
+        {}
+        <VStack spacing={3}>
+          <Icon as={MdHealthAndSafety} w={12} h={12} color="blue.500" />
+          <Heading
+            size={{ base: "lg", md: "xl" }}
+            bgGradient="linear(to-r, blue.600, teal.500)"
+            bgClip="text"
+            textAlign="center"
+          >
+            Create Account
+          </Heading>
+          <Text
+            color="gray.600"
+            textAlign="center"
+            fontSize={{ base: "sm", md: "md" }}
+          >
+            Join District Care to report civic issues
+          </Text>
+        </VStack>
+
+        {}
+        <Box
+          p={{ base: 6, md: 8 }}
+          bg={bgColor}
+          borderRadius="2xl"
+          borderWidth="1px"
+          borderColor={borderColor}
+          boxShadow="xl"
+        >
+          {error && (
+            <Alert status="error" mb={6} borderRadius="md">
+              <AlertIcon />
+              <Text fontSize="sm">{error}</Text>
+            </Alert>
+          )}
+
+          <Box as="form" onSubmit={handleSubmit}>
+            <VStack spacing={5}>
+              <FormControl isRequired>
+                <FormLabel fontWeight="semibold" fontSize="sm">
+                  Full Name
+                </FormLabel>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <Icon as={MdPerson} color="gray.400" />
+                  </InputLeftElement>
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="John Doe"
+                    size="lg"
+                    borderRadius="lg"
+                  />
+                </InputGroup>
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel fontWeight="semibold" fontSize="sm">
+                  Email Address
+                </FormLabel>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <EmailIcon color="gray.400" />
+                  </InputLeftElement>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    size="lg"
+                    borderRadius="lg"
+                  />
+                </InputGroup>
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel fontWeight="semibold" fontSize="sm">
+                  Password
+                </FormLabel>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <LockIcon color="gray.400" />
+                  </InputLeftElement>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Create a strong password"
+                    size="lg"
+                    borderRadius="lg"
+                  />
+                </InputGroup>
+              </FormControl>
+
+              <Button
+                type="submit"
+                colorScheme="blue"
+                isLoading={loading}
+                w="full"
+                size="lg"
+                borderRadius="lg"
+                bgGradient="linear(to-r, blue.500, teal.400)"
+                _hover={{
+                  bgGradient: "linear(to-r, blue.600, teal.500)",
+                }}
+                mt={2}
+              >
+                Sign Up
+              </Button>
+
+              <Text fontSize="sm" color="gray.600" textAlign="center">
+                Already have an account?{" "}
+                <Link
+                  as={RouterLink}
+                  to="/login"
+                  color="blue.500"
+                  fontWeight="semibold"
+                  _hover={{ color: "blue.600", textDecoration: "underline" }}
+                >
+                  Log in
+                </Link>
+              </Text>
+            </VStack>
+          </Box>
+        </Box>
+      </VStack>
+    </Container>
+  );
+}

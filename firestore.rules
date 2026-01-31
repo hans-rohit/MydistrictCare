@@ -66,10 +66,16 @@ service cloud.firestore {
           'verifiedBy'
         ]);
 
-      // Admin can soft-delete
+      // Admin can soft-delete any post
       allow update: if isSignedIn()
         && userRole() == 'admin'
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['deleted']);
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['deleted', 'deletedAt', 'status']);
+
+      // Public users can soft-delete their own posts
+      allow update: if isSignedIn()
+        && userRole() == 'public'
+        && request.auth.uid == resource.data.createdBy.uid
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['deleted', 'deletedAt', 'status']);
 
       // No hard deletes
       allow delete: if false;
